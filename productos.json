@@ -1,0 +1,20 @@
+PRODUCTOS_FILE = os.path.join(os.path.dirname(__file__), "productos.json")
+
+# Cargar productos al inicio
+productos_api = []
+
+def cargar_productos_api():
+    global productos_api
+if os.path.exists(PRODUCTOS_FILE):
+    try:
+    with open(PRODUCTOS_FILE, "r", encoding = "utf-8") as f:
+    productos_api = json.load(f)
+print(f "📦 Cargados {len(productos_api)} productos desde la API")
+except:
+    productos_api = []
+else :
+    productos_api = []
+
+def guardar_productos_api():
+    with open(PRODUCTOS_FILE, "w", encoding = "utf-8") as f:
+    json.dump(productos_api, f, indent = 2, ensure_ascii = False)

@@ -5,8 +5,6 @@
     <ProjectGuid>6f0bda6e-0be7-47d3-9d41-e13798e62c72</ProjectGuid>
     <ProjectHome>.</ProjectHome>
     <StartupFile>run_api.py</StartupFile>
-    <SearchPath>
-    </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>FerreCalvillitoAPI</Name>
@@ -15,33 +13,46 @@
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
-    <CommandLineArguments>
-    </CommandLineArguments>
     <InterpreterPath>C:\Python313\python.exe</InterpreterPath>
   </PropertyGroup>
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DebugSymbols>true</DebugSymbols>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
+
+  <!-- Archivos de código -->
   <ItemGroup>
+    <Compile Include="main.py" />
+    <Compile Include="run_api.py" />
     <Compile Include="backend\auth_utils.py" />
     <Compile Include="backend\models_user.py" />
-    <Compile Include="main.py" />
     <Compile Include="routers\auth.py" />
-    <Compile Include="run_api.py" />
   </ItemGroup>
+
+  <!-- Carpetas -->
   <ItemGroup>
     <Folder Include="backend\" />
     <Folder Include="routers\" />
     <Folder Include="static\" />
+    <Folder Include="env\" />
+    <Folder Include="__pycache__\" />
   </ItemGroup>
+
+  <!-- Archivos de contenido -->
   <ItemGroup>
     <Content Include=".env" />
     <Content Include="requirements.txt" />
+    <Content Include="conexion_actual.txt" />
+    <Content Include="contactos.json" />
+    <Content Include="direcciones.json" />
+    <Content Include="telefonos.json" />
+    <Content Include="usuarios.json" />
     <Content Include="static\app.js" />
     <Content Include="static\index.html" />
     <Content Include="static\login.html" />
@@ -49,16 +60,13 @@
     <Content Include="static\notificacion.mp3" />
     <Content Include="static\style.css" />
   </ItemGroup>
+
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.13" />
   </ItemGroup>
+
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
-  <!-- Uncomment the CoreCompile target to enable the Build command in
-       Visual Studio and specify your pre- and post-build commands in
-       the BeforeBuild and AfterBuild targets below. -->
-  <!--<Target Name="CoreCompile" />-->
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
+
+  <Target Name="BeforeBuild"></Target>
+  <Target Name="AfterBuild"></Target>
 </Project>

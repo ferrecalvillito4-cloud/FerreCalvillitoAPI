@@ -51,6 +51,18 @@ oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
+@app.post("/api/productos/admin-upload")
+async def admin_upload_productos(data: list[dict]):
+    """
+    Recibe lista de productos desde el admin y reemplaza la base interna del API.
+    Cada producto debe tener: Codigo, Nombre, Precio, Existencia
+    """
+    global productos_api
+    productos_api = data
+    guardar_productos_api()
+    print(f"📦 {len(data)} productos recibidos desde admin")
+    return {"ok": True, "mensaje": f"{len(data)} productos actualizados en la API"}
+
 @app.get("/auth/google/login")
 async def login_google(request: Request):
     redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5000/auth/google/callback")
@@ -149,40 +161,8 @@ async def index():
 # =============================
 @app.get("/producto")
 async def obtener_productos():
-    config = leer_cadena_conexion()
-    if not config:
-        return JSONResponse({"error": "No hay base de datos configurada"}, status_code=404)
-    try:
-        con = fdb.connect(
-            dsn=config.get("database"),
-            user=config.get("user", "SYSDBA"),
-            password=config.get("password", "masterkey"),
-            charset=config.get("charset", "UTF8"),
-            port=int(config.get("port", 3050)),
-        )
-        cur = con.cursor()
-        cur.execute("""
-            SELECT LP.PRODUCTO, AP.DESCRIPCION, LP.PRECIO, AP.EXISTENCIA
-            FROM A_LISTAPRECIOS LP
-            LEFT JOIN A_PRODUCTO AP ON LP.PRODUCTO = AP.PRODUCTO
-            ORDER BY LP.PRODUCTO DESC
-        """)
-        productos = [
-            {
-                "Codigo": fila[0],
-                "Nombre": fila[1] or "",
-                "Precio": float(fila[2]) if fila[2] else 0.0,
-                "Existencia": float(fila[3]) if fila[3] else 0.0
-            } for fila in cur.fetchall()
-        ]
-        con.close()
-        return JSONResponse(content=productos, media_type="application/json; charset=utf-8")
-    except Exception as e:
-        print("❌ Error al conectar con Firebird:", e)
-        return JSONResponse(
-            {"error": "Error al conectar con la base de datos", "detalle": str(e)},
-            status_code=500
-        )
+    global productos_api
+    return JSONResponse(content=productos_api, media_type="application/json; charset=utf-8")
 
 # ================================
 # 💬 Mensajes de usuario
@@ -564,14 +544,7 @@ async def eliminar_telefono(id: str):
 @app.on_event("startup")
 async def startup_event():
     print("🚀 Ferre-Calvillito API iniciada correctamente")
-    print("👉 Abre en el navegador: http://127.0.0.1:5000")
-    
-    # Cargar direcciones y teléfonos
     cargar_datos()
-    
-    # Iniciar tarea de limpieza en segundo plano
+    cargar_productos_api()  # 🔹 Cargar productos del archivo
     asyncio.create_task(tarea_limpieza_periodica())
-    print("🗑️ Tarea de limpieza automática de mensajes iniciada (cada 24 horas)")
-    
-    # Ejecutar limpieza inicial al arrancar
     limpiar_mensajes_antiguos()
