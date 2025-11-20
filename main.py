@@ -381,23 +381,28 @@ TELEFONOS_FILE = os.path.join(os.path.dirname(__file__), "telefonos.json")
 # Cargar datos al inicio
 def cargar_datos():
     global direcciones, telefonos
+
+    # Cargar direcciones
     if os.path.exists(DIRECCIONES_FILE):
         try:
             with open(DIRECCIONES_FILE, "r", encoding="utf-8") as f:
                 direcciones = json.load(f)
             print(f"📍 Cargadas {len(direcciones)} direcciones")
-        except:
+        except Exception as e:
             direcciones = []
+            print(f"⚠️ Error al cargar direcciones.json: {e}")
     else:
         direcciones = []
-    
+
+    # Cargar teléfonos
     if os.path.exists(TELEFONOS_FILE):
         try:
             with open(TELEFONOS_FILE, "r", encoding="utf-8") as f:
                 telefonos = json.load(f)
             print(f"📞 Cargados {len(telefonos)} teléfonos")
-        except:
+        except Exception as e:
             telefonos = []
+            print(f"⚠️ Error al cargar telefonos.json: {e}")
     else:
         telefonos = []
 
@@ -544,7 +549,7 @@ async def eliminar_telefono(id: str):
 @app.on_event("startup")
 async def startup_event():
     print("🚀 Ferre-Calvillito API iniciada correctamente")
-    cargar_datos()
-    cargar_productos_api()  # 🔹 Cargar productos del archivo
-    asyncio.create_task(tarea_limpieza_periodica())
-    limpiar_mensajes_antiguos()
+    cargar_datos()            # 🔹 Cargar direcciones y teléfonos
+    cargar_productos_api()     # 🔹 Cargar productos del archivo
+    limpiar_mensajes_antiguos()  # 🔹 Limpiar mensajes antiguos al inicio
+    asyncio.create_task(tarea_limpieza_periodica())  # 🔹 Tarea periódica de limpieza
