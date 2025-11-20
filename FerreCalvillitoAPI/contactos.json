@@ -1,0 +1,23 @@
+{
+  "direcciones": [
+    {
+      "id": "2dbaea17-df7d-4743-a05a-a1827951d399",
+      "calle": "la laguna ",
+      "numero": "102",
+      "colonia": "la escuela",
+      "ciudad": "ags",
+      "estado": "ags",
+      "cp": "20344",
+      "fecha_creacion": "2025-11-18T15:59:51.011719"
+    }
+  ],
+  "telefonos": [
+    {
+      "id": "36e03d87-efd9-40f3-9cf2-30d54e8889a1",
+      "numero": "4491127651",
+      "tipo": "manager",
+      "descripcion": "",
+      "fecha_creacion": "2025-11-18T16:01:20.561804"
+    }
+  ]
+}

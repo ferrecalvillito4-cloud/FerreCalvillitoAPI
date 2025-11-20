@@ -1,0 +1,1108 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="WIN1252">
+    <title>Ferre-Calvillito</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* ========== Carrito (igual que antes) ========== */
+        #carrito-ventana {
+            position: fixed;
+            top: 50px;
+            right: 50px;
+            width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: white;
+            padding: 20px;
+            border: 2px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .producto-card {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 5px;
+        }
+
+        .carrito-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 5px;
+        }
+
+            .carrito-item input {
+                width: 50px;
+            }
+
+        /* ========== Chat / UI ========== */
+        #abrir-chat {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #25D366;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 55px;
+            height: 55px;
+            font-size: 26px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1400;
+        }
+
+        #chat-opciones {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            padding: 8px;
+            display: none;
+            z-index: 1450;
+            width: 220px;
+        }
+
+            #chat-opciones button {
+                width: 100%;
+                background: transparent;
+                border: none;
+                padding: 8px;
+                margin: 4px 0;
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 14px;
+            }
+
+                #chat-opciones button:hover {
+                    background: #f5f5f5;
+                }
+
+        .contador-boton {
+            background: #e74c3c;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+        }
+
+        #contador-total {
+            display: none; /* por defecto oculto */
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 6px;
+            font-size: 12px;
+        }
+
+        #chat-ventana {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 360px;
+            height: 480px;
+            background: #f7f7f7;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1500;
+        }
+
+
+        #chat-header {
+            background: #075E54;
+            color: white;
+            padding: 8px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        #chat-botones {
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            background: #efefef;
+            justify-content: center;
+        }
+
+            #chat-botones button {
+                background: #25D366;
+                color: white;
+                border: none;
+                padding: 6px 8px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+            }
+
+        #chat-mensajes {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background: #ECE5DD;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .msg-admin {
+            align-self: flex-start;
+            background: #fff;
+            border-radius: 8px;
+            padding: 6px 10px;
+            max-width: 75%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: #DCF8C6;
+            border-radius: 8px;
+            padding: 6px 10px;
+            max-width: 75%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+
+        #chat-input {
+            display: flex;
+            border-top: 1px solid #ccc;
+            background: white;
+            padding: 6px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        #chat-texto {
+            flex: 1;
+            border: none;
+            padding: 8px;
+            font-size: 14px;
+            border-radius: 6px;
+        }
+
+        #chat-enviar {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin-left: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Modal para enviar nuevo mensaje (header) */
+        #modal-mensaje {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%,-50%);
+            background: white;
+            padding: 18px;
+            border-radius: 8px;
+            border: 1px solid #bbb;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            z-index: 2000;
+            display: none;
+            width: 420px;
+        }
+
+            #modal-mensaje textarea {
+                width: 100%;
+                height: 100px;
+                margin-top: 8px;
+                resize: vertical;
+                padding: 8px;
+                font-size: 14px;
+            }
+
+            #modal-mensaje .acciones {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+                margin-top: 10px;
+            }
+
+        /* Mantener aspecto del header original y botones envio arriba */
+        #botones-mensaje-header {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+            justify-content: center;
+        }
+
+            #botones-mensaje-header button {
+                padding: 8px 10px;
+                border-radius: 6px;
+                border: none;
+                cursor: pointer;
+                font-size: 14px;
+            }
+
+        #btn-env-preg {
+            background: lightblue;
+        }
+
+        #btn-env-sug {
+            background: lightgreen;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 style="text-align:center;">Ferre-Calvillito</h1>
+        <div id="header" style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <button id="inicio">🏠 Inicio</button>
+            <button id="atras">⬅️ Atrás</button>
+            <button id="siguiente">➡️ Siguiente</button>
+            <input type="text" id="busqueda" placeholder="Buscar producto..." />
+            <button id="btn-buscar">🔍 Buscar</button>
+            <div id="carrito-icon" style="cursor:pointer;">🛒 <span id="carrito-count">0</span></div>
+            <div id="usuario-info" style="margin-left:10px; cursor:pointer;">👤 Usuario</div>
+        </div>
+
+        <!-- Botones de información de contacto -->
+        <div id="botones-mensaje-header">
+            <button id="btn-ver-direcciones">📍 Ver Direcciones</button>
+            <button id="btn-ver-telefonos">📞 Ver Teléfonos</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="productos-container"></div>
+    </main>
+
+    <!-- Carrito -->
+    <div id="carrito-ventana">
+        <h3>Carrito de Compras</h3>
+        <div id="carrito-items"></div>
+        <div id="carrito-total" style="margin-top: 10px; font-weight: bold;"></div>
+        <button id="cerrar-carrito" style="margin-top: 10px;">Cerrar</button>
+    </div>
+
+    <!-- Botón burbuja chat (abajo) -->
+    <button id="abrir-chat" title="Mensajes">💬 <span id="contador-total">0</span></button>
+
+    <!-- Menú de opciones que abre la burbuja -->
+    <div id="chat-opciones" aria-hidden="true">
+        <button id="op-preguntas">💭 Preguntas <span id="count-preguntas" class="contador-boton">0</span></button>
+        <button id="op-sugerencias">💡 Sugerencias <span id="count-sugerencias" class="contador-boton">0</span></button>
+    </div>
+
+    <!-- Chat ventana (reply only cuando admin respondió) -->
+    <div id="chat-ventana" aria-hidden="true">
+        <div id="chat-header">
+            <div>Chat — <span id="chat-titulo">sin categoría</span></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <small id="chat-info" style="font-size:12px;color:#ddd;"></small>
+                <button id="cerrar-chat" style="background:transparent;border:none;color:white;cursor:pointer;">✖</button>
+            </div>
+        </div>
+
+        <!-- Botones para enviar por categoría (arriba dentro del chat) -->
+        <div id="chat-botones">
+            <button id="btn-enviar-preg">💭 Enviar sobre Pregunta</button>
+            <button id="btn-enviar-sug">💡 Enviar sobre Sugerencia</button>
+        </div>
+
+        <div id="chat-mensajes"></div>
+
+        <div id="chat-input">
+            <input id="chat-texto" type="text" placeholder="Escribe un mensaje..." />
+            <button id="chat-enviar">➤</button>
+        </div>
+    </div>
+
+    <!-- Modal para enviar primer mensaje (desde header botones) -->
+    <div id="modal-mensaje">
+        <h3 id="modal-titulo">Enviar mensaje</h3>
+        <label id="modal-tipo-label">Tipo:</label>
+        <div style="margin-top:6px;">
+            <strong id="modal-tipo">pregunta</strong>
+        </div>
+        <textarea id="modal-texto" placeholder="Escribe tu mensaje..."></textarea>
+        <div class="acciones">
+            <button id="modal-cerrar">Cerrar</button>
+            <button id="modal-enviar" style="background:#25D366;color:white;border:none;padding:8px 12px;border-radius:6px;">Enviar</button>
+        </div>
+    </div>
+
+    <!-- Modal para ver direcciones -->
+    <div id="modal-direcciones" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); background: white; padding: 20px; border-radius: 8px; border: 1px solid #bbb; box-shadow: 0 6px 20px rgba(0,0,0,0.25); z-index: 2000; display: none; width: 450px; max-height: 70vh; overflow-y: auto;">
+        <h3 style="margin-top: 0;">📍 Direcciones de la Ferretería</h3>
+        <div id="lista-direcciones" style="margin: 15px 0;">
+            <p>Cargando direcciones...</p>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+            <button id="modal-direcciones-cerrar" style="padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; background: #075E54; color: white;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal para ver teléfonos -->
+    <div id="modal-telefonos" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); background: white; padding: 20px; border-radius: 8px; border: 1px solid #bbb; box-shadow: 0 6px 20px rgba(0,0,0,0.25); z-index: 2000; display: none; width: 450px; max-height: 70vh; overflow-y: auto;">
+        <h3 style="margin-top: 0;">📞 Teléfonos de Contacto</h3>
+        <div id="lista-telefonos" style="margin: 15px 0;">
+            <p>Cargando teléfonos...</p>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+            <button id="modal-telefonos-cerrar" style="padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; background: #075E54; color: white;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- audio notificación (coloca notificacion.mp3 en /static o ajusta ruta) -->
+    <audio id="sonido-mensaje" src="/static/notificacion.mp3" preload="auto"></audio>
+
+    <script>
+        /* ============================
+           Variables y referencias DOM
+           ============================ */
+        let usuario = null;
+        // Productos/carrito refs (igual que tenías)
+        const contenedor = document.getElementById("productos-container");
+        const carritoIcon = document.getElementById("carrito-icon");
+        const carritoVentana = document.getElementById("carrito-ventana");
+        const carritoItemsDiv = document.getElementById("carrito-items");
+        const carritoCount = document.getElementById("carrito-count");
+        const carritoTotalDiv = document.getElementById("carrito-total");
+        const cerrarCarritoBtn = document.getElementById("cerrar-carrito");
+        const busquedaInput = document.getElementById("busqueda");
+        const btnBuscar = document.getElementById("btn-buscar");
+
+        // Mensajes / chat refs
+        const abrirChatBtn = document.getElementById("abrir-chat");
+        const chatOpciones = document.getElementById("chat-opciones");
+        const opPreguntas = document.getElementById("op-preguntas");
+        const opSugerencias = document.getElementById("op-sugerencias");
+        const countPreguntas = document.getElementById("count-preguntas");
+        const countSugerencias = document.getElementById("count-sugerencias");
+        const contadorTotal = document.getElementById("contador-total");
+        console.log(contadorTotal);
+
+        const chatVentana = document.getElementById("chat-ventana");
+        const chatTitulo = document.getElementById("chat-titulo");
+        const chatMensajes = document.getElementById("chat-mensajes");
+        const chatTexto = document.getElementById("chat-texto");
+        const chatEnviar = document.getElementById("chat-enviar");
+        const cerrarChatBtn = document.getElementById("cerrar-chat");
+        const chatInfo = document.getElementById("chat-info");
+
+        const btnEnviarPregInChat = document.getElementById("btn-enviar-preg");
+        const btnEnviarSugInChat = document.getElementById("btn-enviar-sug");
+
+        // Header send buttons (para iniciar conversación)
+        // Header buttons para ver direcciones y teléfonos
+        const btnVerDirecciones = document.getElementById("btn-ver-direcciones");
+        const btnVerTelefonos = document.getElementById("btn-ver-telefonos");
+
+        const modalDirecciones = document.getElementById("modal-direcciones");
+        const modalTelefonos = document.getElementById("modal-telefonos");
+        const listaDirecciones = document.getElementById("lista-direcciones");
+        const listaTelefonos = document.getElementById("lista-telefonos");
+
+        const modalDireccionesCerrar = document.getElementById("modal-direcciones-cerrar");
+        const modalTelefonosCerrar = document.getElementById("modal-telefonos-cerrar");
+        const modal = document.getElementById("modal-mensaje");
+        const modalTitulo = document.getElementById("modal-titulo");
+        const modalTipo = document.getElementById("modal-tipo");
+        const modalTexto = document.getElementById("modal-texto");
+        const modalCerrar = document.getElementById("modal-cerrar");
+        const modalEnviar = document.getElementById("modal-enviar");
+
+        const sonido = document.getElementById("sonido-mensaje");
+
+        // Productos + carrito estado
+        let productos = [];
+        let productosFiltrados = [];
+        let paginaActual = 0;
+        const productosPorPagina = 12;
+        let carrito = [];
+
+        // Chat state
+        let tipoChat = null; // 'pregunta' || 'sugerencia'
+        let ultimoConteoTotal = 0;
+
+        /* ============================
+           Utilidades / inicialización
+           ============================ */
+
+        function verificarUsuario() {
+            usuario = JSON.parse(localStorage.getItem("usuario"));
+            const usuarioDiv = document.getElementById("usuario-info");
+            if (!usuario) {
+                // si no hay usuario, redirigir al login como hacías
+                window.location.href = "/static/login.html";
+                return false;
+            }
+            usuarioDiv.textContent = `👤 ${usuario.nombre || "Invitado"}`;
+            usuarioDiv.onclick = () => {
+                if (confirm("¿Cerrar sesión?")) {
+                    localStorage.removeItem("usuario");
+                    localStorage.removeItem("carrito_" + usuario.correo);
+                    window.location.href = "/static/login.html";
+                }
+            };
+            return true;
+        }
+
+        function cargarCarritoGuardado() {
+            if (!usuario) return;
+            const almacen = JSON.parse(localStorage.getItem("carrito_" + usuario.correo) || "[]");
+            carrito = almacen;
+            actualizarCarrito();
+        }
+
+        function guardarCarrito() {
+            if (!usuario) return;
+            localStorage.setItem("carrito_" + usuario.correo, JSON.stringify(carrito));
+        }
+
+        function actualizarCarrito() {
+            carritoItemsDiv.innerHTML = "";
+            let total = 0;
+            if (!carrito.length) carritoItemsDiv.innerHTML = "<p>El carrito está vacío</p>";
+            carrito.forEach(p => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "carrito-item";
+                itemDiv.innerHTML = `
+                            <span>${p.Nombre}</span>
+                            <input type="number" min="1" value="${p.cantidad}" class="cantidad-input">
+                            <span>$${(p.Precio * p.cantidad).toFixed(2)}</span>
+                            <button class="eliminar-btn">X</button>
+                        `;
+                carritoItemsDiv.appendChild(itemDiv);
+                itemDiv.querySelector(".eliminar-btn").addEventListener("click", () => eliminarDelCarrito(p.Codigo));
+                itemDiv.querySelector(".cantidad-input").addEventListener("change", e => {
+                    cambiarCantidad(p.Codigo, parseInt(e.target.value) || 1);
+                });
+                total += p.Precio * p.cantidad;
+            });
+            carritoTotalDiv.textContent = `Total: $${total.toFixed(2)}`;
+            carritoCount.textContent = carrito.reduce((acc, p) => acc + p.cantidad, 0);
+            guardarCarrito();
+        }
+
+        function agregarAlCarrito(codigo) {
+            const producto = productos.find(p => p.Codigo === codigo);
+            if (!producto) return;
+            const existente = carrito.find(p => p.Codigo === codigo);
+            if (existente) existente.cantidad++;
+            else carrito.push({ ...producto, cantidad: 1 });
+            actualizarCarrito();
+        }
+
+        function eliminarDelCarrito(codigo) {
+            carrito = carrito.filter(p => p.Codigo !== codigo);
+            actualizarCarrito();
+        }
+
+        function cambiarCantidad(codigo, cantidad) {
+            const producto = carrito.find(p => p.Codigo === codigo);
+            if (!producto) return;
+            producto.cantidad = Math.max(1, cantidad);
+            actualizarCarrito();
+        }
+
+        /* ============================
+           Productos (igual que antes)
+           ============================ */
+        async function cargarProductos() {
+            try {
+                const res = await fetch("/producto");
+                if (!res.ok) throw new Error("No hay productos disponibles");
+                productos = await res.json();
+                productosFiltrados = [...productos];
+                paginaActual = 0;
+                mostrarPagina();
+            } catch (err) {
+                contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>No hay productos para mostrar</p>";
+            }
+        }
+
+        function mostrarPagina() {
+            contenedor.innerHTML = "";
+            if (!productosFiltrados.length) {
+                contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>No se encontraron productos</p>";
+                return;
+            }
+            const inicio = paginaActual * productosPorPagina;
+            const fin = Math.min(inicio + productosPorPagina, productosFiltrados.length);
+            productosFiltrados.slice(inicio, fin).forEach(p => {
+                const card = document.createElement("div");
+                card.className = "producto-card";
+                card.dataset.codigo = p.Codigo;
+                card.innerHTML = `
+                            <div>Código: ${p.Codigo}</div>
+                            <div>Nombre: ${p.Nombre}</div>
+                            <div>Precio: $${Number(p.Precio).toFixed(2)}</div>
+                            <div>Existencia: ${p.Existencia}</div>
+                            <button class="btn-agregar">Agregar al carrito</button>
+                        `;
+                contenedor.appendChild(card);
+            });
+        }
+
+        /* ============================
+           Eventos UI básicos (igual)
+           ============================ */
+        carritoIcon.addEventListener("click", () => {
+            carritoVentana.style.display = carritoVentana.style.display === "none" ? "block" : "none";
+        });
+        cerrarCarritoBtn.addEventListener("click", () => carritoVentana.style.display = "none");
+
+        document.getElementById("inicio").addEventListener("click", () => {
+            busquedaInput.value = "";
+            productosFiltrados = [...productos];
+            paginaActual = 0;
+            mostrarPagina();
+            carritoVentana.style.display = "none";
+        });
+
+        document.getElementById("atras").addEventListener("click", () => { if (paginaActual > 0) paginaActual--; mostrarPagina(); });
+        document.getElementById("siguiente").addEventListener("click", () => { if ((paginaActual + 1) * productosPorPagina < productosFiltrados.length) paginaActual++; mostrarPagina(); });
+
+        btnBuscar.addEventListener("click", () => {
+            const filtro = busquedaInput.value.toLowerCase().trim();
+            productosFiltrados = filtro ? productos.filter(p => (p.Codigo || "").toLowerCase().includes(filtro) || (p.Nombre || "").toLowerCase().includes(filtro)) : [...productos];
+            paginaActual = 0;
+            mostrarPagina();
+        });
+
+        contenedor.addEventListener("click", e => {
+            if (e.target.classList.contains("btn-agregar")) {
+                agregarAlCarrito(e.target.parentElement.dataset.codigo);
+            }
+        });
+
+        // Event listeners para ver direcciones
+        btnVerDirecciones.addEventListener("click", async () => {
+            modalDirecciones.style.display = "block";
+            await cargarDirecciones();
+        });
+
+        modalDireccionesCerrar.addEventListener("click", () => {
+            modalDirecciones.style.display = "none";
+        });
+
+        // Event listeners para ver teléfonos
+        btnVerTelefonos.addEventListener("click", async () => {
+            modalTelefonos.style.display = "block";
+            await cargarTelefonos();
+        });
+
+        modalTelefonosCerrar.addEventListener("click", () => {
+            modalTelefonos.style.display = "none";
+        });
+
+        // Funciones para cargar datos
+        async function cargarDirecciones() {
+            try {
+                const res = await fetch("/direcciones");
+                if (res.ok) {
+                    const direcciones = await res.json();
+                    if (direcciones.length > 0) {
+                        listaDirecciones.innerHTML = direcciones.map(d => {
+                            const calle = d.calle || d.Calle || '';
+                            const numero = d.numero || d.Numero || '';
+                            const colonia = d.colonia || d.Colonia || '';
+                            const ciudad = d.ciudad || d.Ciudad || '';
+                            const estado = d.estado || d.Estado || '';
+                            const cp = d.cp || d.CP || d.codigoPostal || '';
+
+                            return `
+                        <div style="border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9;">
+                            <p style="margin: 4px 0;"><strong>📍 ${calle} ${numero}</strong></p>
+                            <p style="margin: 4px 0; color: #666;">Colonia: ${colonia}</p>
+                            <p style="margin: 4px 0; color: #666;">${ciudad}, ${estado}</p>
+                            ${cp ? `<p style="margin: 4px 0; color: #666;">CP: ${cp}</p>` : ''}
+                        </div>
+                    `;
+                        }).join('');
+                    } else {
+                        listaDirecciones.innerHTML = "<p style='text-align:center; color:#999;'>No hay direcciones registradas</p>";
+                    }
+                } else {
+                    listaDirecciones.innerHTML = "<p style='text-align:center; color:#e74c3c;'>❌ No se pudieron cargar las direcciones</p>";
+                }
+            } catch (err) {
+                console.error("Error al cargar direcciones:", err);
+                listaDirecciones.innerHTML = "<p style='text-align:center; color:#e74c3c;'>❌ Error al cargar direcciones</p>";
+            }
+        }
+
+        async function cargarTelefonos() {
+            try {
+                const res = await fetch("/telefonos");
+                if (res.ok) {
+                    const telefonos = await res.json();
+                    if (telefonos.length > 0) {
+                        listaTelefonos.innerHTML = telefonos.map(t => {
+                            const numero = t.numero || t.Numero || '';
+                            const tipo = t.tipo || t.Tipo || '';
+                            const descripcion = t.descripcion || t.Descripcion || '';
+
+                            return `
+                        <div style="border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9;">
+                            <p style="margin: 4px 0;"><strong>📞 ${numero}</strong></p>
+                            ${tipo ? `<p style="margin: 4px 0; color: #666;">Tipo: ${tipo}</p>` : ''}
+                            ${descripcion ? `<p style="margin: 4px 0; color: #666;">${descripcion}</p>` : ''}
+                        </div>
+                    `;
+                        }).join('');
+                    } else {
+                        listaTelefonos.innerHTML = "<p style='text-align:center; color:#999;'>No hay teléfonos registrados</p>";
+                    }
+                } else {
+                    listaTelefonos.innerHTML = "<p style='text-align:center; color:#e74c3c;'>❌ No se pudieron cargar los teléfonos</p>";
+                }
+            } catch (err) {
+                console.error("Error al cargar teléfonos:", err);
+                listaTelefonos.innerHTML = "<p style='text-align:center; color:#e74c3c;'>❌ Error al cargar teléfonos</p>";
+            }
+        }
+
+        function openModalEnviar(tipo) {
+            if (!verificarUsuario()) return;
+            modal.style.display = "block";
+            modalTipo.textContent = tipo;
+            modalTitulo.textContent = tipo === "pregunta" ? "Enviar Pregunta" : "Enviar Sugerencia";
+            modalTexto.value = "";
+            modalTexto.focus();
+            modal.dataset.tipo = tipo;
+        }
+        modalCerrar.addEventListener("click", () => modal.style.display = "none");
+
+        modalEnviar.addEventListener("click", async () => {
+            if (!verificarUsuario()) return;
+            const tipo = modal.dataset.tipo || "pregunta";
+            const texto = modalTexto.value.trim();
+            if (!texto) { alert("Escribe un mensaje antes de enviar."); return; }
+
+            // Validar campos
+            if (!usuario?.correo) { alert("No se ha detectado tu usuario."); return; }
+            if (!tipo) { alert("No se ha detectado tipo de mensaje."); return; }
+
+            try {
+                const res = await fetch("/api/mensajes/enviar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        usuario: usuario.correo,  // obligatorio
+                        tipo: tipo,                // obligatorio
+                        mensaje: texto             // obligatorio
+                    })
+                });
+                if (!res.ok) throw new Error("Error al enviar mensaje");
+
+                modal.style.display = "none";
+                alert("✅ Mensaje enviado correctamente");
+                modalTexto.value = "";
+            } catch (err) {
+                console.error("Error enviar mensaje:", err);
+                alert("❌ No se pudo enviar el mensaje. Revisa la consola.");
+            }
+        });
+
+        // Enviar mensaje desde chat (botón de chat + Enter)
+        async function enviarMensajeChat() {
+            if (!verificarUsuario()) return;
+            if (!tipoChat) { alert("Selecciona categoría desde la burbuja."); return; }
+            const texto = chatTexto.value.trim();
+            if (!texto) return;
+
+            try {
+                const res = await fetch("/api/mensajes/enviar", {  // 🔹 corregido
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        usuario: usuario.correo,
+                        tipo: tipoChat,
+                        mensaje: texto
+                    })
+                });
+
+                if (!res.ok) throw new Error("Error al enviar mensaje");
+                chatTexto.value = "";
+                await cargarChat(tipoChat);
+                await actualizarContadores(); // 🔹 actualizar globito al enviar
+            } catch (err) {
+                console.error("Error enviar mensaje chat:", err);
+                alert("❌ No se pudo enviar el mensaje.");
+            }
+        }
+
+        chatEnviar.addEventListener("click", enviarMensajeChat);
+        chatTexto.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); enviarMensajeChat(); } });
+
+        // ===============================
+        // Botón de abrir burbuja (solo mostrar opciones)
+        // ===============================
+        abrirChatBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (!verificarUsuario()) return;
+
+            // Alterna mostrar/ocultar el menú de opciones
+            chatOpciones.style.display = chatOpciones.style.display === "block" ? "none" : "block";
+
+            // ⚡ NO tocar contadores aquí
+        });
+
+        // cerrar menu si clic afuera
+        document.addEventListener("click", (e) => {
+            if (!chatOpciones.contains(e.target) && e.target !== abrirChatBtn) {
+                chatOpciones.style.display = "none";
+            }
+        });
+
+        async function abrirChatTipo(tipo) {
+            if (!verificarUsuario()) return;
+
+            tipoChat = tipo;
+            chatTitulo.textContent = tipo === "pregunta" ? "Preguntas" : "Sugerencias";
+            chatVentana.style.display = "flex";
+            chatInfo.textContent = `(conversación: ${usuario?.correo || 'anon'})`;
+
+            // Cargar mensajes
+            await cargarChat(tipo);
+        }
+
+        // seleccionar opción: abre chat de respuesta (solo si admin respondió)
+        // Luego los listeners que la usan
+        opPreguntas.addEventListener("click", async () => {
+            await abrirChatTipo("pregunta");
+        });
+        opSugerencias.addEventListener("click", async () => {
+            await abrirChatTipo("sugerencia");
+        });
+
+        // ===============================
+        // Abrir chat de un tipo específico
+        // ===============================
+        async function refrescarContadores() {
+            if (!usuario?.correo) return;
+
+            try {
+                const res = await fetch(`/api/mensajes/contadores?usuario=${encodeURIComponent(usuario.correo)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                countPreguntas.innerText = data.noLeidosPreguntas;
+                countSugerencias.innerText = data.noLeidosSugerencias;
+
+                const total = data.total;
+                contadorTotal.innerText = total;
+                contadorTotal.style.display = total ? "inline-block" : "none";
+            } catch (err) {
+                console.error("Error al refrescar contadores:", err);
+            }
+        }
+
+        cerrarChatBtn.addEventListener("click", () => {
+            chatVentana.style.display = "none";
+            tipoChat = null;
+        });
+
+        /* ============================
+           Funciones para obtener mensajes + contadores
+           ============================ */
+
+        // obtener mensajes para el usuario y tipo (intenta varios endpoints)
+        // obtener mensajes para el usuario y tipo
+        async function obtenerMensajes(tipo) {
+            if (!usuario?.correo) return [];
+            try {
+                const res = await fetch("/api/mensajes/recibir");
+                if (!res.ok) return [];
+                const all = await res.json();
+
+                // Filtrar mensajes para el usuario
+                const mensajesUsuario = all.filter(m => {
+                    const origen = (m.origen || "").toLowerCase();
+                    const destinatario = (m.destinatario || "").toLowerCase();
+                    const remitente = (m.usuario || "").toLowerCase();
+                    const tipoMsg = (m.tipo || "").toLowerCase();
+
+                    const esTipoCorrecto = tipoMsg === tipo || tipoMsg === tipo + "s";
+
+                    return esTipoCorrecto && (
+                        // Mensaje enviado por admin a este usuario
+                        (origen === "admin" && destinatario === usuario.correo.toLowerCase()) ||
+                        // Mensaje enviado por el usuario mismo
+                        (origen === "usuario" && remitente === usuario.correo.toLowerCase())
+                    );
+                });
+
+                return mensajesUsuario;
+            } catch (err) {
+                console.error("obtenerMensajes:", err);
+                return [];
+            }
+        }
+
+        async function cargarChat(tipo) {
+            try {
+                // Obtener todos los mensajes para este tipo
+                const mensajes = await obtenerMensajes(tipo);
+                chatMensajes.innerHTML = "";
+
+                // Ordenar por fecha ascendente
+                mensajes.sort((a, b) => {
+                    const fa = new Date(a.Fecha || a.fecha || a.FechaMensaje || a.created_at || 0).getTime();
+                    const fb = new Date(b.Fecha || b.fecha || b.FechaMensaje || b.created_at || 0).getTime();
+                    return fa - fb;
+                });
+
+                const idsMensajesAdminNoLeidos = [];
+
+                for (const m of mensajes) {
+                    const div = document.createElement("div");
+                    const remitente = (m.de || m.remitente || m.usuario || "").toString().toLowerCase();
+                    const fromAdmin = remitente === "admin" || remitente === "administrador";
+
+                    div.className = fromAdmin ? "msg-admin" : "msg-user";
+
+                    const texto = m.mensaje || m.Mensaje || m.Contenido || m.MensajeTexto || m.contenido || "";
+                    const fecha = m.Fecha || m.fecha || m.created_at || "";
+                    const imagen = m.imagen || m.Imagen || null;
+                    const ubicacion = m.ubicacion || m.Ubicacion || null;
+
+                    // 📦 Contenido del mensaje
+                    let contenidoHTML = "";
+
+                    // 📝 Texto
+                    if (texto) {
+                        contenidoHTML += `<p style="margin:4px 0;">${texto}</p>`;
+                    }
+
+                    // 🖼️ Imagen adjunta
+                    if (imagen) {
+                        contenidoHTML += `
+                <div style="margin-top:6px;">
+                    <img src="${imagen}"
+                         alt="imagen enviada"
+                         style="max-width:200px; border-radius:8px; display:block;">
+                </div>
+            `;
+                    }
+
+                    // 📍 Ubicación
+                    if (ubicacion) {
+                        const { lat, lng, direccion } = ubicacion;
+                        if (lat && lng) {
+                            contenidoHTML += `
+                    <div style="margin-top:6px;">
+                        <iframe
+                            width="200" height="150" style="border-radius:8px; margin-top:4px;"
+                            src="https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed">
+                        </iframe>
+                    </div>
+                `;
+                        } else if (direccion) {
+                            contenidoHTML += `<p>📍 ${direccion}</p>`;
+                        }
+                    }
+
+                    // 🕒 Fecha
+                    if (fecha) {
+                        contenidoHTML += `<small style="display:block; color:#666;">🕒 ${formatFecha(fecha)}</small>`;
+                    }
+
+                    div.innerHTML = contenidoHTML;
+                    chatMensajes.appendChild(div);
+
+                    // 🔘 Solo para marcar mensajes del admin no leídos
+                    if (fromAdmin && !m.leido) {
+                        idsMensajesAdminNoLeidos.push(m.id || m.ID || m.CodigoMensaje);
+                    }
+                }
+
+                chatMensajes.scrollTop = chatMensajes.scrollHeight;
+
+                // Marcar como leídos en backend, pero no filtramos en UI
+                if (idsMensajesAdminNoLeidos.length) {
+                    try {
+                        await fetch("/api/mensajes/marcar-leido", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ ids: idsMensajesAdminNoLeidos, usuario: usuario.correo })
+                        });
+                        await actualizarContadores();
+                    } catch (err) {
+                        console.error("Error al marcar mensajes como leídos:", err);
+                    }
+                }
+            } catch (err) {
+                console.error("cargarChat:", err);
+            }
+        }
+
+        async function enviarMensajeChat() {
+            if (!verificarUsuario()) return;
+            if (!tipoChat) { alert("Selecciona categoría desde la burbuja."); return; }
+            const texto = chatTexto.value.trim();
+            if (!texto) return;
+
+            try {
+                const res = await fetch("/api/mensajes/enviar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        usuario: usuario.correo,
+                        tipo: tipoChat,
+                        mensaje: texto
+                    })
+                });
+
+                if (!res.ok) throw new Error("Error al enviar mensaje");
+                chatTexto.value = "";
+                await cargarChat(tipoChat);
+            } catch (err) {
+                console.error("Error enviar mensaje chat:", err);
+                alert("❌ No se pudo enviar el mensaje.");
+            }
+        }
+
+        chatEnviar.addEventListener("click", enviarMensajeChat);
+        chatTexto.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); enviarMensajeChat(); } });
+
+        // Los botones dentro del chat para enviar directamente en categoría (igual funcionalidad que header modal)
+        btnEnviarPregInChat.addEventListener("click", () => {
+            tipoChat = "pregunta"; chatTitulo.textContent = "Preguntas"; chatVentana.style.display = "flex"; chatInfo.textContent = `(conversación: ${usuario?.correo || 'anon'})`;
+        });
+        btnEnviarSugInChat.addEventListener("click", () => {
+            tipoChat = "sugerencia"; chatTitulo.textContent = "Sugerencias"; chatVentana.style.display = "flex"; chatInfo.textContent = `(conversación: ${usuario?.correo || 'anon'})`;
+        });
+
+        /* ============================
+           Contadores: traer conteo de mensajes por tipo para este usuario
+           ============================ */
+        async function obtenerContadores() {
+            if (!usuario?.correo) return { preguntas: 0, sugerencias: 0 };
+            try {
+                const res = await fetch("/api/mensajes/recibir");
+                if (!res.ok) return { preguntas: 0, sugerencias: 0 };
+
+                const all = await res.json();
+                console.log("Todos los mensajes recibidos:", all); // Para depurar
+
+                // Filtrar solo los mensajes del admin dirigidos a este usuario
+                const adminMsgs = all.filter(m => {
+                    const destinatario = (m.destinatario || "").toLowerCase();
+                    const remitente = (m.origen || "").toLowerCase();
+                    return destinatario === usuario.correo.toLowerCase() &&
+                        (remitente === "admin" || remitente === "administrador");
+                });
+
+                // Contar preguntas y sugerencias no leídas
+                const preguntas = adminMsgs.filter(m => (m.tipo || "").toLowerCase().startsWith("pregunta") && !m.leido).length;
+                const sugerencias = adminMsgs.filter(m => (m.tipo || "").toLowerCase().startsWith("sugerencia") && !m.leido).length;
+
+                return { preguntas, sugerencias };
+
+            } catch (err) {
+                console.error("obtenerContadores:", err);
+                return { preguntas: 0, sugerencias: 0 };
+            }
+        }
+
+        async function actualizarContadores() {
+            if (!usuario?.correo) return;
+
+            try {
+                const res = await fetch(`/api/mensajes/contadores?usuario=${encodeURIComponent(usuario.correo)}`);
+                if (!res.ok) return;
+
+                const data = await res.json();
+                countPreguntas.innerText = data.noLeidosPreguntas;
+                countSugerencias.innerText = data.noLeidosSugerencias;
+
+                const total = data.total;
+                if (total > ultimoConteoTotal) {
+                    try { sonido.play().catch(() => { }); } catch { }
+                }
+
+                contadorTotal.innerText = total;
+                contadorTotal.style.display = total ? "inline-block" : "none";
+                ultimoConteoTotal = total;
+
+            } catch (err) {
+                console.error("Error actualizarContadores:", err);
+            }
+        }
+
+        // Actualizar contadores periódicamente
+        setInterval(() => {
+            if (usuario) actualizarContadores();
+        }, 5000);
+
+        /* ============================
+           Helper fechas
+           ============================ */
+        function formatFecha(f) {
+            try {
+                const d = new Date(f);
+                if (isNaN(d)) return f;
+                const dd = String(d.getDate()).padStart(2, '0');
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const min = String(d.getMinutes()).padStart(2, '0');
+                return `${dd}/${mm} ${hh}:${min}`;
+            } catch {
+                return f;
+            }
+        }
+
+        /* ============================
+Inicialización final
+============================ */
+        (async () => {
+            // Cargar usuario, productos y carrito
+            verificarUsuario();
+            cargarCarritoGuardado();
+            await cargarProductos();
+
+            // Inicializar contadores (ligero retraso para asegurar carga de usuario)
+            setTimeout(() => {
+                if (usuario) actualizarContadores();
+            }, 300);
+
+            // ===== Refrescos periódicos =====
+            // Refrescar chat solo si está abierto
+            setInterval(async () => {
+                if (chatVentana.style.display === "flex" && tipoChat) {
+                    await cargarChat(tipoChat);
+                }
+            }, 5000);
+
+            // Refrescar los contadores de mensajes
+            setInterval(() => {
+                actualizarContadores();
+            }, 5000);
+
+            // Refrescar carrito por cambios externos
+            setInterval(() => {
+                cargarCarritoGuardado();
+            }, 5000);
+        })();
+    </script>
+</body>
+</html>

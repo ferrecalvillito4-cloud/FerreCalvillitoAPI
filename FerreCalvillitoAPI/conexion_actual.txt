@@ -1,0 +1,1 @@
+Database=C:\Users\Usuario\Desktop\CAL.FDB;User=SYSDBA;Password=masterkey;ServerType=0;DataSource=localhost;Port=3050;Charset=UTF8;Dialect=3

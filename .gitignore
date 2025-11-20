@@ -1,0 +1,22 @@
+# Carpeta de Visual Studio
+.vs/
+
+# Entorno virtual de python
+env/
+env*/ 
+
+# __pycache__ basura de Python
+__pycache__/
+
+# Archivos sensibles
+*.env
+
+# Archivos de Python temporales
+*.pyc
+
+# Mypy cache
+.mypy_cache/
+
+# Archivos de configuración de usuario
+*.sln
+*.vsidx

@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar Sesión - Ferre-Calvillito</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            text-align: center;
+            margin-top: 100px;
+        }
+
+        .card {
+            background: white;
+            display: inline-block;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button {
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+            button:hover {
+                background-color: #357ae8;
+            }
+
+        #invitado {
+            background-color: gray;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Ferre-Calvillito</h2>
+        <p>Inicia sesión para guardar tus productos</p>
+        <button onclick="iniciarGoogle()">🔑 Iniciar sesión con Google</button>
+        <button id="invitado" onclick="modoInvitado()">👤 Continuar como invitado</button>
+    </div>
+
+    <script>
+        function iniciarGoogle() {
+            window.location.href = "/auth/google/login";
+        }
+
+        function modoInvitado() {
+            localStorage.setItem("usuario", JSON.stringify({
+                nombre: "Invitado",
+                correo: "invitado@ferrecalvillito.local"
+            }));
+            window.location.href = "/";
+        }
+    </script>
+</body>
+</html>

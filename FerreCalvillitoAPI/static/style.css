@@ -1,0 +1,131 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 0 20px;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    background-color: #fff;
+    padding: 10px 0;
+    z-index: 100;
+    border-bottom: 2px solid #99c2ff;
+}
+
+    header h1 {
+        margin: 0 0 10px 0;
+        text-align: center;
+        color: #1a3f7a;
+    }
+
+#header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+    #header button {
+        padding: 8px 12px;
+        background-color: lightsteelblue;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    #header input {
+        padding: 8px;
+        width: 200px;
+    }
+
+#carrito-icon {
+    margin-left: auto;
+    position: relative;
+    cursor: pointer;
+    font-size: 24px;
+}
+
+#carrito-count {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    background-color: red;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 14px;
+}
+
+#productos-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.producto-card {
+    background-color: #e6f0ff;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #99c2ff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+    .producto-card div {
+        margin: 4px 0;
+    }
+
+    .producto-card button {
+        margin-top: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+        background-color: #1a3f7a;
+        color: white;
+        border: none;
+        border-radius: 4px;
+    }
+
+#carrito-ventana {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 300px;
+    max-height: 400px;
+    background-color: white;
+    border: 2px solid #1a3f7a;
+    border-radius: 6px;
+    padding: 10px;
+    overflow-y: auto;
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+    z-index: 200;
+}
+
+.hidden {
+    display: none;
+}
+
+#carrito-ventana h3 {
+    margin-top: 0;
+    text-align: center;
+}
+
+#carrito-items div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+#carrito-items button {
+    background-color: red;
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
