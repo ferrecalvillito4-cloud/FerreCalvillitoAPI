@@ -5,3 +5,5 @@ fdb
 python-multipart
 pydantic
 Authlib>=1.3.0
+python-dotenv
+itsdangerous
