@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 import fdb
+import itsdangerous
 import os
 import json
 from datetime import datetime, timedelta
