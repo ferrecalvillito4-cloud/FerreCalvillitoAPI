@@ -13,6 +13,7 @@ import json
 from datetime import datetime, timedelta
 from uuid import uuid4
 import asyncio
+from productos_api import cargar_productos_api, guardar_productos_api, productos_api
 
 # =============================
 # 🚀 Inicialización principal
