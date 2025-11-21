@@ -173,6 +173,9 @@
             padding: 6px 10px;
             max-width: 75%;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
         }
         
         .msg-user {
@@ -182,6 +185,9 @@
             padding: 6px 10px;
             max-width: 75%;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
         }
         
         #chat-input {
@@ -377,8 +383,8 @@
 
     <script>
         /* ============================
-                                           Variables y referencias DOM
-                                           ============================ */
+                                                           Variables y referencias DOM
+                                                           ============================ */
         let usuario = null;
         // Productos/carrito refs (igual que tenías)
         const contenedor = document.getElementById("productos-container");
@@ -919,6 +925,7 @@
                     const remitente = (m.de || m.remitente || m.usuario || "").toString().toLowerCase();
                     const fromAdmin = remitente === "admin" || remitente === "administrador";
 
+
                     div.className = fromAdmin ? "msg-admin" : "msg-user";
 
                     const texto = m.mensaje || m.Mensaje || m.Contenido || m.MensajeTexto || m.contenido || "";
@@ -931,7 +938,7 @@
 
                     // 📝 Texto
                     if (texto) {
-                        contenidoHTML += `<p style="margin:4px 0;">${texto}</p>`;
+                        contenidoHTML += `<p style="margin:4px 0; word-wrap: break-word; white-space: pre-wrap; overflow-wrap: break-word;">${texto}</p>`;
                     }
 
                     // 🖼️ Imagen adjunta
