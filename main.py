@@ -582,8 +582,20 @@ async def eliminar_telefono(id: str):
 # =============================
 @app.on_event("startup")
 async def startup_event():
-    print("🚀 Ferre-Calvillito API iniciada correctamente")
+    print("\n🚀 Ferre-Calvillito API iniciada correctamente")
+    print(f"📁 Ruta base: {os.path.dirname(__file__)}")
+    print(f"📁 PRODUCTOS_FILE: {productos_module.PRODUCTOS_FILE}")
+    print(f"   Existe: {os.path.exists(productos_module.PRODUCTOS_FILE)}")
+    
     cargar_datos()            # 🔹 Cargar direcciones y teléfonos
-    cargar_productos_api()     # 🔹 Cargar productos del archivo
+    cargar_productos_api()    # 🔹 Cargar productos del archivo
+    
+    # 🔍 DEBUG: Ver estado inicial
+    print(f"📦 Productos cargados en startup: {len(productos_module.productos_api)}")
+    if productos_module.productos_api:
+        print(f"   Primer producto: {productos_module.productos_api[0]}")
+    
     limpiar_mensajes_antiguos()  # 🔹 Limpiar mensajes antiguos al inicio
     asyncio.create_task(tarea_limpieza_periodica())  # 🔹 Tarea periódica de limpieza
+    
+    print("✅ API lista\n")

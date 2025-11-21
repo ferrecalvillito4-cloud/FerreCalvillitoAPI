@@ -377,8 +377,8 @@
 
     <script>
         /* ============================
-                           Variables y referencias DOM
-                           ============================ */
+                                           Variables y referencias DOM
+                                           ============================ */
         let usuario = null;
         // Productos/carrito refs (igual que tenías)
         const contenedor = document.getElementById("productos-container");
@@ -532,15 +532,31 @@
            ============================ */
         async function cargarProductos() {
             try {
+                console.log("🔄 Iniciando carga de productos...");
                 const res = await fetch("/producto");
-                if (!res.ok) throw new Error("No hay productos disponibles");
+
+                console.log(`📡 Respuesta del servidor: ${res.status} ${res.statusText}`);
+
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+
                 const datos = await res.json();
+
+                // 🔍 DEBUG - Ver exactamente qué devuelve
+                console.log("📦 Datos recibidos del servidor:", datos);
+                console.log(`📊 Tipo de datos: ${typeof datos}`);
+                console.log(`📊 ¿Es array?: ${Array.isArray(datos)}`);
+                console.log(`📊 Total items: ${Array.isArray(datos) ? datos.length : 'N/A'}`);
+
+                if (Array.isArray(datos) && datos.length > 0) {
+                    console.log("📋 Primer producto:", datos[0]);
+                }
 
                 // ✅ Asegurar que es array
                 productos = Array.isArray(datos) ? datos : [];
 
                 // ✅ Si viene vacío, mostrar mensaje
                 if (productos.length === 0) {
+                    console.warn("⚠️ La lista de productos está vacía");
                     contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>No hay productos disponibles en este momento</p>";
                     return;
                 }
@@ -549,9 +565,10 @@
                 paginaActual = 0;
                 mostrarPagina();
 
-                console.log(`✅ Cargados ${productos.length} productos`);
+                console.log(`✅ Cargados ${productos.length} productos exitosamente`);
             } catch (err) {
-                console.error("Error al cargar productos:", err);
+                console.error("❌ Error al cargar productos:", err);
+                console.error("Stack trace:", err.stack);
                 contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>❌ Error al cargar productos</p>";
             }
         }
