@@ -15,6 +15,7 @@ from uuid import uuid4
 import asyncio
 import productos_api as productos_module
 from productos_api import cargar_productos_api, guardar_productos_api, PRODUCTOS_FILE
+import productos_api as productos_module
 
 # =============================
 # 🚀 Inicialización principal
@@ -58,32 +59,26 @@ async def admin_upload_productos(data: list[dict]):
     """
     Recibe lista de productos desde el admin y reemplaza la base interna del API.
     """
-    # Actualizar la lista global en el módulo
-    productos_module.productos_api = data
-    
-    print(f"\n📤 RECIBIDO DATA:")
+    print(f"\n{'='*60}")
+    print(f"📤 RECIBIDO DATOS DE ADMIN:")
     print(f"   Tipo: {type(data)}")
-    print(f"   Largo: {len(data)}")
+    print(f"   Cantidad: {len(data)}")
     if data:
         print(f"   Primer item: {data[0]}")
     
-    print(f"✅ productos_api actualizado con {len(data)} items")
+    # ✅ Actualizar la variable global en el módulo
+    productos_module.productos_api = data
+    print(f"✅ Variable global actualizada con {len(data)} items")
     
     # ✅ GUARDAR EN ARCHIVO
     try:
-        guardar_productos_api()
-        print(f"💾 Guardados en {PRODUCTOS_FILE}")
-        
-        # Verificar que se guardó
-        if os.path.exists(PRODUCTOS_FILE):
-            with open(PRODUCTOS_FILE, "r", encoding="utf-8") as f:
-                guardados = json.load(f)
-            print(f"✅ Verificación: {len(guardados)} productos en archivo")
-        else:
-            print(f"❌ ERROR: No se creó el archivo")
+        productos_module.guardar_productos_api()
+        print(f"💾 Archivo guardado correctamente")
     except Exception as e:
         print(f"❌ Error al guardar: {e}")
         return {"ok": False, "error": str(e)}
+    
+    print(f"{'='*60}\n")
     
     return {
         "ok": True, 
@@ -190,7 +185,15 @@ async def index():
 # =============================
 @app.get("/producto")
 async def obtener_productos():
-    return JSONResponse(content=productos_module.productos_api, media_type="application/json; charset=utf-8")
+    """
+    Devuelve todos los productos
+    """
+    productos = productos_module.obtener_productos_api()
+    print(f"🔍 GET /producto - Devolviendo {len(productos)} productos")
+    return JSONResponse(
+        content=productos, 
+        media_type="application/json; charset=utf-8"
+    )
 
 # ================================
 # 💬 Mensajes de usuario
