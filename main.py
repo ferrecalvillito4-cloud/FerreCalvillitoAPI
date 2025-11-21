@@ -13,7 +13,8 @@ import json
 from datetime import datetime, timedelta
 from uuid import uuid4
 import asyncio
-from productos_api import cargar_productos_api, guardar_productos_api, productos_api
+import productos_api as productos_module
+from productos_api import cargar_productos_api, guardar_productos_api, PRODUCTOS_FILE
 
 # =============================
 # 🚀 Inicialización principal
@@ -56,20 +57,17 @@ oauth.register(
 async def admin_upload_productos(data: list[dict]):
     """
     Recibe lista de productos desde el admin y reemplaza la base interna del API.
-    Cada producto debe tener: Codigo, Nombre, Precio, Existencia
     """
-    global productos_api
+    # Actualizar la lista global en el módulo
+    productos_module.productos_api = data
     
-    # ✅ DEBUG: Ver qué se recibe
     print(f"\n📤 RECIBIDO DATA:")
     print(f"   Tipo: {type(data)}")
     print(f"   Largo: {len(data)}")
     if data:
         print(f"   Primer item: {data[0]}")
     
-    # Reemplazar lista global
-    productos_api = data
-    print(f"✅ productos_api actualizado con {len(productos_api)} items")
+    print(f"✅ productos_api actualizado con {len(data)} items")
     
     # ✅ GUARDAR EN ARCHIVO
     try:
@@ -90,8 +88,9 @@ async def admin_upload_productos(data: list[dict]):
     return {
         "ok": True, 
         "mensaje": f"{len(data)} productos actualizados en la API",
-        "guardados": len(productos_api)
+        "guardados": len(productos_module.productos_api)
     }
+
 
 @app.get("/auth/google/login")
 async def login_google(request: Request):
@@ -191,8 +190,7 @@ async def index():
 # =============================
 @app.get("/producto")
 async def obtener_productos():
-    global productos_api
-    return JSONResponse(content=productos_api, media_type="application/json; charset=utf-8")
+    return JSONResponse(content=productos_module.productos_api, media_type="application/json; charset=utf-8")
 
 # ================================
 # 💬 Mensajes de usuario
