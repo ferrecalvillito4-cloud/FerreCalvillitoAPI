@@ -1,11 +1,13 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="WIN1252">
     <title>Ferre-Calvillito</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
         /* ========== Carrito (igual que antes) ========== */
+        
         #carrito-ventana {
             position: fixed;
             top: 50px;
@@ -17,17 +19,17 @@
             padding: 20px;
             border: 2px solid #444;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             display: none;
             z-index: 1000;
         }
-
+        
         .producto-card {
             border: 1px solid #ccc;
             padding: 10px;
             margin: 5px;
         }
-
+        
         .carrito-item {
             display: flex;
             justify-content: space-between;
@@ -35,12 +37,12 @@
             margin-bottom: 8px;
             gap: 5px;
         }
-
-            .carrito-item input {
-                width: 50px;
-            }
-
+        
+        .carrito-item input {
+            width: 50px;
+        }
         /* ========== Chat / UI ========== */
+        
         #abrir-chat {
             position: fixed;
             bottom: 20px;
@@ -53,10 +55,10 @@
             height: 55px;
             font-size: 26px;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             z-index: 1400;
         }
-
+        
         #chat-opciones {
             position: fixed;
             bottom: 90px;
@@ -64,30 +66,30 @@
             background: white;
             border-radius: 10px;
             border: 1px solid #ccc;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             padding: 8px;
             display: none;
             z-index: 1450;
             width: 220px;
         }
-
-            #chat-opciones button {
-                width: 100%;
-                background: transparent;
-                border: none;
-                padding: 8px;
-                margin: 4px 0;
-                cursor: pointer;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 14px;
-            }
-
-                #chat-opciones button:hover {
-                    background: #f5f5f5;
-                }
-
+        
+        #chat-opciones button {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 8px;
+            margin: 4px 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        #chat-opciones button:hover {
+            background: #f5f5f5;
+        }
+        
         .contador-boton {
             background: #e74c3c;
             color: white;
@@ -95,9 +97,10 @@
             padding: 2px 8px;
             font-size: 12px;
         }
-
+        
         #contador-total {
-            display: none; /* por defecto oculto */
+            display: none;
+            /* por defecto oculto */
             position: absolute;
             top: -6px;
             right: -6px;
@@ -107,7 +110,7 @@
             padding: 3px 6px;
             font-size: 12px;
         }
-
+        
         #chat-ventana {
             position: fixed;
             bottom: 20px;
@@ -119,11 +122,10 @@
             border-radius: 10px;
             display: none;
             flex-direction: column;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             z-index: 1500;
         }
-
-
+        
         #chat-header {
             background: #075E54;
             color: white;
@@ -135,7 +137,7 @@
             align-items: center;
             font-weight: bold;
         }
-
+        
         #chat-botones {
             display: flex;
             gap: 8px;
@@ -143,17 +145,17 @@
             background: #efefef;
             justify-content: center;
         }
-
-            #chat-botones button {
-                background: #25D366;
-                color: white;
-                border: none;
-                padding: 6px 8px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 13px;
-            }
-
+        
+        #chat-botones button {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
         #chat-mensajes {
             flex: 1;
             padding: 10px;
@@ -163,25 +165,25 @@
             flex-direction: column;
             gap: 8px;
         }
-
+        
         .msg-admin {
             align-self: flex-start;
             background: #fff;
             border-radius: 8px;
             padding: 6px 10px;
             max-width: 75%;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
         }
-
+        
         .msg-user {
             align-self: flex-end;
             background: #DCF8C6;
             border-radius: 8px;
             padding: 6px 10px;
             max-width: 75%;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
         }
-
+        
         #chat-input {
             display: flex;
             border-top: 1px solid #ccc;
@@ -190,7 +192,7 @@
             border-bottom-left-radius: 10px;
             border-bottom-right-radius: 10px;
         }
-
+        
         #chat-texto {
             flex: 1;
             border: none;
@@ -198,7 +200,7 @@
             font-size: 14px;
             border-radius: 6px;
         }
-
+        
         #chat-enviar {
             background: #25D366;
             color: white;
@@ -209,40 +211,40 @@
             cursor: pointer;
             font-weight: bold;
         }
-
         /* Modal para enviar nuevo mensaje (header) */
+        
         #modal-mensaje {
             position: fixed;
             left: 50%;
             top: 50%;
-            transform: translate(-50%,-50%);
+            transform: translate(-50%, -50%);
             background: white;
             padding: 18px;
             border-radius: 8px;
             border: 1px solid #bbb;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
             z-index: 2000;
             display: none;
             width: 420px;
         }
-
-            #modal-mensaje textarea {
-                width: 100%;
-                height: 100px;
-                margin-top: 8px;
-                resize: vertical;
-                padding: 8px;
-                font-size: 14px;
-            }
-
-            #modal-mensaje .acciones {
-                display: flex;
-                gap: 8px;
-                justify-content: flex-end;
-                margin-top: 10px;
-            }
-
+        
+        #modal-mensaje textarea {
+            width: 100%;
+            height: 100px;
+            margin-top: 8px;
+            resize: vertical;
+            padding: 8px;
+            font-size: 14px;
+        }
+        
+        #modal-mensaje .acciones {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
         /* Mantener aspecto del header original y botones envio arriba */
+        
         #botones-mensaje-header {
             display: flex;
             gap: 8px;
@@ -250,24 +252,25 @@
             margin-top: 8px;
             justify-content: center;
         }
-
-            #botones-mensaje-header button {
-                padding: 8px 10px;
-                border-radius: 6px;
-                border: none;
-                cursor: pointer;
-                font-size: 14px;
-            }
-
+        
+        #botones-mensaje-header button {
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
         #btn-env-preg {
             background: lightblue;
         }
-
+        
         #btn-env-sug {
             background: lightgreen;
         }
     </style>
 </head>
+
 <body>
     <header>
         <h1 style="text-align:center;">Ferre-Calvillito</h1>
@@ -374,8 +377,8 @@
 
     <script>
         /* ============================
-           Variables y referencias DOM
-           ============================ */
+                           Variables y referencias DOM
+                           ============================ */
         let usuario = null;
         // Productos/carrito refs (igual que tenías)
         const contenedor = document.getElementById("productos-container");
@@ -506,7 +509,9 @@
             if (!producto) return;
             const existente = carrito.find(p => p.Codigo === codigo);
             if (existente) existente.cantidad++;
-            else carrito.push({ ...producto, cantidad: 1 });
+            else carrito.push({...producto,
+                cantidad: 1
+            });
             actualizarCarrito();
         }
 
@@ -529,12 +534,25 @@
             try {
                 const res = await fetch("/producto");
                 if (!res.ok) throw new Error("No hay productos disponibles");
-                productos = await res.json();
+                const datos = await res.json();
+
+                // ✅ Asegurar que es array
+                productos = Array.isArray(datos) ? datos : [];
+
+                // ✅ Si viene vacío, mostrar mensaje
+                if (productos.length === 0) {
+                    contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>No hay productos disponibles en este momento</p>";
+                    return;
+                }
+
                 productosFiltrados = [...productos];
                 paginaActual = 0;
                 mostrarPagina();
+
+                console.log(`✅ Cargados ${productos.length} productos`);
             } catch (err) {
-                contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>No hay productos para mostrar</p>";
+                console.error("Error al cargar productos:", err);
+                contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>❌ Error al cargar productos</p>";
             }
         }
 
@@ -551,12 +569,12 @@
                 card.className = "producto-card";
                 card.dataset.codigo = p.Codigo;
                 card.innerHTML = `
-                            <div>Código: ${p.Codigo}</div>
-                            <div>Nombre: ${p.Nombre}</div>
-                            <div>Precio: $${Number(p.Precio).toFixed(2)}</div>
-                            <div>Existencia: ${p.Existencia}</div>
-                            <button class="btn-agregar">Agregar al carrito</button>
-                        `;
+            <div>Código: ${p.Codigo}</div>
+            <div>Nombre: ${p.Nombre}</div>
+            <div>Precio: $${Number(p.Precio).toFixed(2)}</div>
+            <div>Existencia: ${p.Existencia}</div>
+            <button class="btn-agregar">Agregar al carrito</button>
+        `;
                 contenedor.appendChild(card);
             });
         }
@@ -577,8 +595,14 @@
             carritoVentana.style.display = "none";
         });
 
-        document.getElementById("atras").addEventListener("click", () => { if (paginaActual > 0) paginaActual--; mostrarPagina(); });
-        document.getElementById("siguiente").addEventListener("click", () => { if ((paginaActual + 1) * productosPorPagina < productosFiltrados.length) paginaActual++; mostrarPagina(); });
+        document.getElementById("atras").addEventListener("click", () => {
+            if (paginaActual > 0) paginaActual--;
+            mostrarPagina();
+        });
+        document.getElementById("siguiente").addEventListener("click", () => {
+            if ((paginaActual + 1) * productosPorPagina < productosFiltrados.length) paginaActual++;
+            mostrarPagina();
+        });
 
         btnBuscar.addEventListener("click", () => {
             const filtro = busquedaInput.value.toLowerCase().trim();
@@ -594,7 +618,7 @@
         });
 
         // Event listeners para ver direcciones
-        btnVerDirecciones.addEventListener("click", async () => {
+        btnVerDirecciones.addEventListener("click", async() => {
             modalDirecciones.style.display = "block";
             await cargarDirecciones();
         });
@@ -604,7 +628,7 @@
         });
 
         // Event listeners para ver teléfonos
-        btnVerTelefonos.addEventListener("click", async () => {
+        btnVerTelefonos.addEventListener("click", async() => {
             modalTelefonos.style.display = "block";
             await cargarTelefonos();
         });
@@ -621,14 +645,14 @@
                     const direcciones = await res.json();
                     if (direcciones.length > 0) {
                         listaDirecciones.innerHTML = direcciones.map(d => {
-                            const calle = d.calle || d.Calle || '';
-                            const numero = d.numero || d.Numero || '';
-                            const colonia = d.colonia || d.Colonia || '';
-                            const ciudad = d.ciudad || d.Ciudad || '';
-                            const estado = d.estado || d.Estado || '';
-                            const cp = d.cp || d.CP || d.codigoPostal || '';
+                                    const calle = d.calle || d.Calle || '';
+                                    const numero = d.numero || d.Numero || '';
+                                    const colonia = d.colonia || d.Colonia || '';
+                                    const ciudad = d.ciudad || d.Ciudad || '';
+                                    const estado = d.estado || d.Estado || '';
+                                    const cp = d.cp || d.CP || d.codigoPostal || '';
 
-                            return `
+                                    return `
                         <div style="border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9;">
                             <p style="margin: 4px 0;"><strong>📍 ${calle} ${numero}</strong></p>
                             <p style="margin: 4px 0; color: #666;">Colonia: ${colonia}</p>
@@ -1105,4 +1129,5 @@ Inicialización final
         })();
     </script>
 </body>
+
 </html>
