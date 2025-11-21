@@ -59,10 +59,39 @@ async def admin_upload_productos(data: list[dict]):
     Cada producto debe tener: Codigo, Nombre, Precio, Existencia
     """
     global productos_api
+    
+    # ✅ DEBUG: Ver qué se recibe
+    print(f"\n📤 RECIBIDO DATA:")
+    print(f"   Tipo: {type(data)}")
+    print(f"   Largo: {len(data)}")
+    if data:
+        print(f"   Primer item: {data[0]}")
+    
+    # Reemplazar lista global
     productos_api = data
-    guardar_productos_api()
-    print(f"📦 {len(data)} productos recibidos desde admin")
-    return {"ok": True, "mensaje": f"{len(data)} productos actualizados en la API"}
+    print(f"✅ productos_api actualizado con {len(productos_api)} items")
+    
+    # ✅ GUARDAR EN ARCHIVO
+    try:
+        guardar_productos_api()
+        print(f"💾 Guardados en {PRODUCTOS_FILE}")
+        
+        # Verificar que se guardó
+        if os.path.exists(PRODUCTOS_FILE):
+            with open(PRODUCTOS_FILE, "r", encoding="utf-8") as f:
+                guardados = json.load(f)
+            print(f"✅ Verificación: {len(guardados)} productos en archivo")
+        else:
+            print(f"❌ ERROR: No se creó el archivo")
+    except Exception as e:
+        print(f"❌ Error al guardar: {e}")
+        return {"ok": False, "error": str(e)}
+    
+    return {
+        "ok": True, 
+        "mensaje": f"{len(data)} productos actualizados en la API",
+        "guardados": len(productos_api)
+    }
 
 @app.get("/auth/google/login")
 async def login_google(request: Request):
@@ -375,6 +404,9 @@ class Telefono(BaseModel):
 # Lista temporal para teléfonos
 telefonos: list[dict] = []
 
+PRODUCTOS_FILE = os.path.join(os.path.dirname(__file__), "productos.json")
+DIRECCIONES_FILE = os.path.join(os.path.dirname(__file__), "direcciones.json")
+TELEFONOS_FILE = os.path.join(os.path.dirname(__file__), "telefonos.json")
 # Al inicio del archivo, junto con las otras listas
 DIRECCIONES_FILE = os.path.join(os.path.dirname(__file__), "direcciones.json")
 TELEFONOS_FILE = os.path.join(os.path.dirname(__file__), "telefonos.json")
