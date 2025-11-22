@@ -1008,8 +1008,33 @@
                 document.getElementById("contador-total").style.display = total > 0 ? "flex" : "none";
                 document.getElementById("contador-total").textContent = total;
 
+                // ✅ AQUÍ ESTÁ LA FIX PRINCIPAL
                 if (total > ultimoConteoTotal) {
-                    document.getElementById("sonido-mensaje").play().catch(() => {});
+                    const sonido = document.getElementById("sonido-mensaje");
+                    if (sonido) {
+                        // Crear promesa con timeout para evitar que se bloquee
+                        const audioPromise = sonido.play();
+                        if (audioPromise !== undefined) {
+                            audioPromise
+                                .then(() => {
+                                    console.log("✅ Sonido reproducido correctamente");
+                                })
+                                .catch(error => {
+                                    console.warn("⚠️ No se pudo reproducir sonido:", error.message);
+                                    // Alternativa: vibración si el navegador soporta
+                                    if (navigator.vibrate) {
+                                        navigator.vibrate([100, 50, 100]); // 100ms, pausa 50ms, 100ms
+                                    }
+                                });
+                        } else {
+                            // Navegadores antiguos sin Promises
+                            try {
+                                sonido.play();
+                            } catch (err) {
+                                console.warn("⚠️ Error reproduciendo sonido (navegador antiguo):", err);
+                            }
+                        }
+                    }
                 }
                 ultimoConteoTotal = total;
             } catch (err) {
