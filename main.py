@@ -506,6 +506,13 @@ class Telefono(BaseModel):
     numero: str
     descripcion: str = ""
 
+class MensajeRequest(BaseModel):
+    usuario: str
+    tipo: str
+    mensaje: str
+    origen: str = "usuario"
+    destinatario: str = None
+
 # Lista temporal para teléfonos
 telefonos: list[dict] = []
 
