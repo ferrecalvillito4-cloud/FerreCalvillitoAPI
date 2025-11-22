@@ -167,10 +167,43 @@
         }
         
         .producto-card>div {
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 11px;
+            line-height: 1.5;
             color: #333;
+            margin-bottom: 6px;
+        }
+        
+        .producto-card .codigo {
+            font-weight: 700;
+            color: #075E54;
+            font-size: 10px;
+            background: #f0f0f0;
+            padding: 3px 6px;
+            border-radius: 4px;
+            display: inline-block;
             margin-bottom: 4px;
+        }
+        
+        .producto-card .nombre {
+            font-weight: 600;
+            color: #2C3E50;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        
+        .producto-card .precio {
+            font-weight: 700;
+            color: #25D366;
+            font-size: 14px;
+        }
+        
+        .producto-card .stock {
+            color: #999;
+            font-size: 10px;
+            background: #fff8e1;
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: inline-block;
         }
         
         .producto-card .btn-agregar {
@@ -767,11 +800,11 @@
                 const card = document.createElement("div");
                 card.className = "producto-card";
                 card.innerHTML = `
-                    <div><strong>${p.Codigo}</strong></div>
-                    <div>${p.Nombre}</div>
-                    <div>$${Number(p.Precio).toFixed(2)}</div>
-                    <div style="color:#666; font-size:11px;">Stock: ${p.Existencia}</div>
-                    <button class="btn-agregar" data-codigo="${p.Codigo}">➕ Agregar</button>
+                <div class="codigo">Código: ${p.Codigo}</div>
+                <div class="nombre">📦 ${p.Nombre}</div>
+                <div class="precio">💰 $${Number(p.Precio).toFixed(2)}</div>
+                <div class="stock">📊 Stock: ${p.Existencia}</div>
+                <button class="btn-agregar" data-codigo="${p.Codigo}">➕ Agregar</button>
                 `;
                 contenedor.appendChild(card);
             });
