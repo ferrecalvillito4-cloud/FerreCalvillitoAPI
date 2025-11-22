@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirigiendo...</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            text-align: center;
+            color: white;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Ferre-Calvillito</h2>
+        <p>Cargando...</p>
+    </div>
+
+    <script>
+        // ========== DETECCIÓN DE DISPOSITIVO ==========
+        function detectarDispositivo() {
+            // Verificar si es móvil por User Agent
+            const esMovilUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // Verificar por tamaño de pantalla
+            const esMovilTamaño = window.innerWidth <= 768;
+
+            // Verificar si es tablet
+            const esTablet = /iPad|Android/.test(navigator.userAgent) && window.innerWidth > 768;
+
+            // Si es tablet, mostrar versión laptop
+            if (esTablet) {
+                return "laptop";
+            }
+
+            // Si es móvil por UA o por tamaño, ir a móvil
+            if (esMovilUA || esMovilTamaño) {
+                return "mobile";
+            }
+
+            return "laptop";
+        }
+
+        // ========== REDIRIGIR ==========
+        function redirigir() {
+            const dispositivo = detectarDispositivo();
+            const urlActual = window.location.href;
+
+            console.log(`📱 Dispositivo detectado: ${dispositivo}`);
+            console.log(`📊 Tamaño pantalla: ${window.innerWidth}x${window.innerHeight}`);
+            console.log(`🔍 User Agent: ${navigator.userAgent}`);
+
+            if (dispositivo === "mobile") {
+                console.log("➡️ Redirigiendo a móvil...");
+                window.location.href = "/static/index-mobile.html";
+            } else {
+                console.log("➡️ Redirigiendo a laptop...");
+                window.location.href = "/static/index.html";
+            }
+        }
+
+        // Esperar un poco para que cargue el DOM
+        window.addEventListener('load', () => {
+            setTimeout(redirigir, 300);
+        });
+
+        // Redirigir también si se cambia el tamaño (por si rotan el dispositivo)
+        let timeoutResize;
+        window.addEventListener('resize', () => {
+            clearTimeout(timeoutResize);
+            timeoutResize = setTimeout(() => {
+                const dispositivoActual = detectarDispositivo();
+                console.log(`🔄 Cambio de tamaño detectado: ${dispositivoActual}`);
+                redirigir();
+            }, 500);
+        });
+
+        // Intentar redirigir inmediatamente
+        redirigir();
+    </script>
+</body>
+
+</html>

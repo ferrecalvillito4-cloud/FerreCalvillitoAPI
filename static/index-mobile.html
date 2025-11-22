@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferre-Calvillito Móvil</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+        /* ========== HEADER ========== */
+        
+        header {
+            background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+            color: white;
+            padding: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        header h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        #header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        #header button,
+        #carrito-icon,
+        #usuario-info {
+            flex: 1;
+            min-width: 45px;
+            padding: 8px 6px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        #header button:active,
+        #carrito-icon:active,
+        #usuario-info:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+        
+        #carrito-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        
+        #usuario-info {
+            text-align: center;
+        }
+        
+        #botones-mensaje-header {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        #botones-mensaje-header button {
+            flex: 1;
+            padding: 10px 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #botones-mensaje-header button:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+        /* ========== BUSCADOR ========== */
+        
+        .buscador-mobile {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        #busqueda {
+            flex: 1;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        #btn-buscar {
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #btn-buscar:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+        /* ========== MAIN ========== */
+        
+        main {
+            padding: 12px;
+            padding-bottom: 80px;
+        }
+        
+        #productos-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .producto-card {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .producto-card:active {
+            transform: scale(0.98);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .producto-card>div {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .producto-card .btn-agregar {
+            margin-top: auto;
+            padding: 8px;
+            background: linear-gradient(135deg, #25D366 0%, #20BA5E 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .producto-card .btn-agregar:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+        }
+        /* ========== CARRITO ========== */
+        
+        #carrito-ventana {
+            position: fixed;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-height: 60vh;
+            background: white;
+            border-top: 3px solid #075E54;
+            border-radius: 12px 12px 0 0;
+            padding: 16px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        #carrito-ventana h3 {
+            margin-bottom: 12px;
+            color: #075E54;
+            font-size: 18px;
+        }
+        
+        .carrito-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        
+        .carrito-item span:first-child {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .carrito-item input {
+            width: 40px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .carrito-item .eliminar-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        #carrito-total {
+            margin-top: 12px;
+            padding: 12px;
+            background: #075E54;
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        #cerrar-carrito {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            background: #075E54;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        /* ========== CHAT BUTTON ========== */
+        
+        #abrir-chat {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            background: linear-gradient(135deg, #25D366 0%, #20BA5E 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+            z-index: 1400;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        #abrir-chat:active {
+            transform: scale(0.95);
+        }
+        
+        #contador-total {
+            display: none;
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            border: 2px solid white;
+        }
+        /* ========== CHAT OPTIONS ========== */
+        
+        #chat-opciones {
+            position: fixed;
+            bottom: 90px;
+            right: 16px;
+            background: white;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            display: none;
+            z-index: 1450;
+            width: auto;
+            min-width: 180px;
+        }
+        
+        #chat-opciones button {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 12px;
+            margin: 4px 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        #chat-opciones button:active {
+            background: #f5f5f5;
+            transform: scale(0.98);
+        }
+        
+        .contador-boton {
+            background: #e74c3c;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        /* ========== CHAT WINDOW ========== */
+        
+        #chat-ventana {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 70vh;
+            max-height: 70vh;
+            background: #f7f7f7;
+            border: none;
+            border-radius: 12px 12px 0 0;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1500;
+        }
+        
+        #chat-header {
+            background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+            color: white;
+            padding: 12px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        #cerrar-chat {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 4px 8px;
+        }
+        
+        #chat-botones {
+            display: flex;
+            gap: 6px;
+            padding: 8px;
+            background: #efefef;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        #chat-botones button {
+            background: linear-gradient(135deg, #25D366 0%, #20BA5E 100%);
+            color: white;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        #chat-botones button:active {
+            transform: scale(0.95);
+        }
+        
+        #chat-mensajes {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            background: #ECE5DD;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .msg-admin,
+        .msg-user {
+            max-width: 85%;
+            border-radius: 8px;
+            padding: 8px 10px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            font-size: 13px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        }
+        
+        .msg-admin {
+            align-self: flex-start;
+            background: #fff;
+        }
+        
+        .msg-user {
+            align-self: flex-end;
+            background: #DCF8C6;
+        }
+        
+        #chat-input {
+            display: flex;
+            gap: 6px;
+            border-top: 1px solid #ccc;
+            background: white;
+            padding: 8px;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        
+        #chat-texto {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 8px;
+            font-size: 13px;
+            border-radius: 6px;
+        }
+        
+        #chat-enviar {
+            background: linear-gradient(135deg, #25D366 0%, #20BA5E 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        /* ========== MODALES ========== */
+        
+        #modal-mensaje {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            display: none;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        #modal-mensaje h3 {
+            margin-bottom: 12px;
+            color: #075E54;
+        }
+        
+        #modal-mensaje textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            resize: vertical;
+        }
+        
+        #modal-mensaje .acciones {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        
+        #modal-mensaje button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        #modal-cerrar {
+            background: #ddd;
+            color: #333;
+        }
+        
+        #modal-enviar {
+            background: linear-gradient(135deg, #25D366 0%, #20BA5E 100%);
+            color: white;
+        }
+        /* ========== RESPONSIVE ========== */
+        
+        @media (max-width: 400px) {
+            header h1 {
+                font-size: 20px;
+                margin-bottom: 8px;
+            }
+            #header button,
+            #carrito-icon,
+            #usuario-info {
+                font-size: 11px;
+                padding: 6px 4px;
+            }
+            #botones-mensaje-header button {
+                font-size: 11px;
+                padding: 8px 6px;
+            }
+            .producto-card {
+                padding: 8px;
+            }
+            .producto-card>div {
+                font-size: 11px;
+            }
+            #abrir-chat {
+                width: 56px;
+                height: 56px;
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>🔧 Ferre-Calvillito</h1>
+        <div id="header">
+            <button id="inicio">🏠 Inicio</button>
+            <button id="atras">⬅️</button>
+            <button id="siguiente">➡️</button>
+            <div id="carrito-icon">🛒<span id="carrito-count">0</span></div>
+            <div id="usuario-info">👤</div>
+        </div>
+        <div class="buscador-mobile">
+            <input type="text" id="busqueda" placeholder="Buscar...">
+            <button id="btn-buscar">🔍</button>
+        </div>
+        <div id="botones-mensaje-header">
+            <button id="btn-ver-direcciones">📍 Dir.</button>
+            <button id="btn-ver-telefonos">📞 Tel.</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="productos-container"></div>
+    </main>
+
+    <!-- CARRITO -->
+    <div id="carrito-ventana">
+        <h3>🛒 Carrito</h3>
+        <div id="carrito-items"></div>
+        <div id="carrito-total"></div>
+        <button id="cerrar-carrito">Cerrar</button>
+    </div>
+
+    <!-- BOTÓN CHAT -->
+    <button id="abrir-chat">💬<span id="contador-total">0</span></button>
+
+    <!-- OPCIONES CHAT -->
+    <div id="chat-opciones">
+        <button id="op-preguntas">💭 Preguntas<span id="count-preguntas" class="contador-boton">0</span></button>
+        <button id="op-sugerencias">💡 Sugerencias<span id="count-sugerencias" class="contador-boton">0</span></button>
+    </div>
+
+    <!-- VENTANA CHAT -->
+    <div id="chat-ventana">
+        <div id="chat-header">
+            <div>💬 <span id="chat-titulo">Chat</span></div>
+            <button id="cerrar-chat">✖</button>
+        </div>
+        <div id="chat-botones">
+            <button id="btn-enviar-preg">💭 Pregunta</button>
+            <button id="btn-enviar-sug">💡 Sugerencia</button>
+        </div>
+        <div id="chat-mensajes"></div>
+        <div id="chat-input">
+            <input id="chat-texto" type="text" placeholder="Mensaje...">
+            <button id="chat-enviar">➤</button>
+        </div>
+    </div>
+
+    <!-- MODAL MENSAJE -->
+    <div id="modal-mensaje">
+        <h3 id="modal-titulo">Enviar mensaje</h3>
+        <p><strong id="modal-tipo">pregunta</strong></p>
+        <textarea id="modal-texto" placeholder="Tu mensaje..."></textarea>
+        <div class="acciones">
+            <button id="modal-cerrar">Cerrar</button>
+            <button id="modal-enviar">Enviar</button>
+        </div>
+    </div>
+
+    <!-- MODALES DIRECCIONES Y TELEFONOS -->
+    <div id="modal-direcciones" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: white; padding: 0; border-radius: 12px; z-index: 2000; display: none; width: 90%; max-width: 500px; max-height: 80vh; overflow: hidden; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 18px;">📍 Direcciones</h2>
+            <button id="modal-direcciones-cerrar" style="background: transparent; border: none; color: white; font-size: 20px; cursor: pointer;">✖</button>
+        </div>
+        <div id="lista-direcciones" style="flex: 1; overflow-y: auto; padding: 15px; background: #fafafa;">Cargando...</div>
+    </div>
+
+    <div id="modal-telefonos" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: white; padding: 0; border-radius: 12px; z-index: 2000; display: none; width: 90%; max-width: 500px; max-height: 80vh; overflow: hidden; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="background: linear-gradient(135deg, #075E54 0%, #128C7E 100%); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 18px;">📞 Teléfonos</h2>
+            <button id="modal-telefonos-cerrar" style="background: transparent; border: none; color: white; font-size: 20px; cursor: pointer;">✖</button>
+        </div>
+        <div id="lista-telefonos" style="flex: 1; overflow-y: auto; padding: 15px; background: #fafafa;">Cargando...</div>
+    </div>
+
+    <audio id="sonido-mensaje" src="/static/notificacion.mp3"></audio>
+
+    <script>
+        let usuario = null;
+        let productos = [];
+        let productosFiltrados = [];
+        let paginaActual = 0;
+        const productosPorPagina = 6; // 2x3 en móvil
+        let carrito = [];
+        let tipoChat = null;
+        let ultimoConteoTotal = 0;
+
+        // ========== DETECTAR SI ES MÓVIL ==========
+        function esMobile() {
+            return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        // ========== USUARIO ==========
+        function verificarUsuario() {
+            usuario = JSON.parse(localStorage.getItem("usuario"));
+            const usuarioDiv = document.getElementById("usuario-info");
+            if (!usuario) {
+                window.location.href = "/static/login.html";
+                return false;
+            }
+            usuarioDiv.textContent = `👤 ${usuario.nombre?.substring(0, 8) || "Usuario"}`;
+            usuarioDiv.onclick = () => {
+                if (confirm("¿Cerrar sesión?")) {
+                    localStorage.removeItem("usuario");
+                    localStorage.removeItem("carrito_" + usuario.correo);
+                    window.location.href = "/static/login.html";
+                }
+            };
+            return true;
+        }
+
+        // ========== CARRITO ==========
+        function cargarCarritoGuardado() {
+            if (!usuario) return;
+            carrito = JSON.parse(localStorage.getItem("carrito_" + usuario.correo) || "[]");
+            actualizarCarrito();
+        }
+
+        function guardarCarrito() {
+            if (!usuario) return;
+            localStorage.setItem("carrito_" + usuario.correo, JSON.stringify(carrito));
+        }
+
+        function actualizarCarrito() {
+            const carritoItemsDiv = document.getElementById("carrito-items");
+            carritoItemsDiv.innerHTML = "";
+            let total = 0;
+            if (!carrito.length) {
+                carritoItemsDiv.innerHTML = "<p style='text-align:center; color:#999;'>Carrito vacío</p>";
+            }
+            carrito.forEach(p => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "carrito-item";
+                itemDiv.innerHTML = `<span>${p.Nombre}</span><input type="number" min="1" value="${p.cantidad}"><span>$${(p.Precio * p.cantidad).toFixed(2)}</span><button class="eliminar-btn">✕</button>`;
+                carritoItemsDiv.appendChild(itemDiv);
+                itemDiv.querySelector(".eliminar-btn").onclick = () => {
+                    carrito = carrito.filter(x => x.Codigo !== p.Codigo);
+                    actualizarCarrito();
+                };
+                itemDiv.querySelector("input").onchange = (e) => {
+                    p.cantidad = Math.max(1, parseInt(e.target.value) || 1);
+                    actualizarCarrito();
+                };
+                total += p.Precio * p.cantidad;
+            });
+            document.getElementById("carrito-total").textContent = `Total: $${total.toFixed(2)}`;
+            document.getElementById("carrito-count").textContent = carrito.reduce((a, p) => a + p.cantidad, 0);
+            guardarCarrito();
+        }
+
+        // ========== PRODUCTOS ==========
+        async function cargarProductos() {
+            try {
+                const res = await fetch("/producto");
+                if (!res.ok) throw new Error("Error al cargar");
+                productos = await res.json() || [];
+                productosFiltrados = [...productos];
+                paginaActual = 0;
+                mostrarPagina();
+            } catch (err) {
+                console.error(err);
+                document.getElementById("productos-container").innerHTML = "<p style='text-align:center;'>Error al cargar productos</p>";
+            }
+        }
+
+        function mostrarPagina() {
+            const contenedor = document.getElementById("productos-container");
+            contenedor.innerHTML = "";
+            if (!productosFiltrados.length) {
+                contenedor.innerHTML = "<p style='grid-column:1/-1; text-align:center;'>No hay productos</p>";
+                return;
+            }
+            const inicio = paginaActual * productosPorPagina;
+            const fin = Math.min(inicio + productosPorPagina, productosFiltrados.length);
+            productosFiltrados.slice(inicio, fin).forEach(p => {
+                const card = document.createElement("div");
+                card.className = "producto-card";
+                card.innerHTML = `
+                    <div><strong>${p.Codigo}</strong></div>
+                    <div>${p.Nombre}</div>
+                    <div>$${Number(p.Precio).toFixed(2)}</div>
+                    <div style="color:#666; font-size:11px;">Stock: ${p.Existencia}</div>
+                    <button class="btn-agregar" data-codigo="${p.Codigo}">➕ Agregar</button>
+                `;
+                contenedor.appendChild(card);
+            });
+        }
+
+        // ========== EVENT LISTENERS ==========
+        document.getElementById("inicio").onclick = () => {
+            document.getElementById("busqueda").value = "";
+            productosFiltrados = [...productos];
+            paginaActual = 0;
+            mostrarPagina();
+        };
+
+        document.getElementById("atras").onclick = () => {
+            if (paginaActual > 0) paginaActual--;
+            mostrarPagina();
+        };
+        document.getElementById("siguiente").onclick = () => {
+            if ((paginaActual + 1) * productosPorPagina < productosFiltrados.length) paginaActual++;
+            mostrarPagina();
+        };
+
+        document.getElementById("btn-buscar").onclick = () => {
+            const filtro = document.getElementById("busqueda").value.toLowerCase();
+            productosFiltrados = filtro ? productos.filter(p => (p.Codigo || "").toLowerCase().includes(filtro) || (p.Nombre || "").toLowerCase().includes(filtro)) : [...productos];
+            paginaActual = 0;
+            mostrarPagina();
+        };
+
+        document.getElementById("carrito-icon").onclick = () => {
+            document.getElementById("carrito-ventana").style.display = document.getElementById("carrito-ventana").style.display === "none" ? "block" : "none";
+        };
+
+        document.getElementById("cerrar-carrito").onclick = () => {
+            document.getElementById("carrito-ventana").style.display = "none";
+        };
+
+        document.getElementById("productos-container").addEventListener("click", (e) => {
+            if (e.target.classList.contains("btn-agregar")) {
+                const codigo = e.target.dataset.codigo;
+                const producto = productos.find(p => p.Codigo === codigo);
+                if (producto) {
+                    const existente = carrito.find(p => p.Codigo === codigo);
+                    if (existente) existente.cantidad++;
+                    else carrito.push({...producto,
+                        cantidad: 1
+                    });
+                    actualizarCarrito();
+                }
+            }
+        });
+
+        // ========== CHAT ==========
+        const abrirChatBtn = document.getElementById("abrir-chat");
+        const chatOpciones = document.getElementById("chat-opciones");
+        const chatVentana = document.getElementById("chat-ventana");
+        const chatMensajes = document.getElementById("chat-mensajes");
+        const chatTexto = document.getElementById("chat-texto");
+        const chatEnviar = document.getElementById("chat-enviar");
+        const cerrarChatBtn = document.getElementById("cerrar-chat");
+
+        abrirChatBtn.onclick = () => {
+            if (!verificarUsuario()) return;
+            chatOpciones.style.display = chatOpciones.style.display === "block" ? "none" : "block";
+        };
+
+        document.addEventListener("click", (e) => {
+            if (!chatOpciones.contains(e.target) && e.target !== abrirChatBtn) {
+                chatOpciones.style.display = "none";
+            }
+        });
+
+        document.getElementById("op-preguntas").onclick = async() => {
+            tipoChat = "pregunta";
+            document.getElementById("chat-titulo").textContent = "Preguntas";
+            chatVentana.style.display = "flex";
+            chatOpciones.style.display = "none";
+            await cargarChat("pregunta");
+        };
+
+        document.getElementById("op-sugerencias").onclick = async() => {
+            tipoChat = "sugerencia";
+            document.getElementById("chat-titulo").textContent = "Sugerencias";
+            chatVentana.style.display = "flex";
+            chatOpciones.style.display = "none";
+            await cargarChat("sugerencia");
+        };
+
+        cerrarChatBtn.onclick = () => {
+            chatVentana.style.display = "none";
+            tipoChat = null;
+        };
+
+        chatEnviar.onclick = async() => {
+            if (!verificarUsuario() || !tipoChat) return;
+            const texto = chatTexto.value.trim();
+            if (!texto) return;
+            try {
+                const res = await fetch("/api/mensajes/enviar", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        usuario: usuario.correo,
+                        tipo: tipoChat,
+                        mensaje: texto
+                    })
+                });
+                if (res.ok) {
+                    chatTexto.value = "";
+                    await cargarChat(tipoChat);
+                    await actualizarContadores();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        chatTexto.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                chatEnviar.click();
+            }
+        });
+
+        // ========== FUNCIONES CHAT ==========
+        async function cargarChat(tipo) {
+            try {
+                const res = await fetch("/api/mensajes/recibir");
+                if (!res.ok) return;
+                const all = await res.json();
+
+                const mensajes = all.filter(m => {
+                    const tipoMsg = (m.tipo || "").toLowerCase();
+                    const esTipo = tipoMsg === tipo || tipoMsg === tipo + "s";
+                    return esTipo && (
+                        (m.origen === "admin" && (m.destinatario || "").toLowerCase() === usuario.correo.toLowerCase()) ||
+                        (m.origen === "usuario" && (m.usuario || "").toLowerCase() === usuario.correo.toLowerCase())
+                    );
+                }).sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0));
+
+                chatMensajes.innerHTML = "";
+                let idsNoLeidos = [];
+
+                mensajes.forEach(m => {
+                    const div = document.createElement("div");
+                    const esAdmin = m.origen === "admin";
+                    div.className = esAdmin ? "msg-admin" : "msg-user";
+                    div.textContent = m.mensaje || "(mensaje vacío)";
+                    chatMensajes.appendChild(div);
+                    if (esAdmin && !m.leido) idsNoLeidos.push(m.id);
+                });
+
+                chatMensajes.scrollTop = chatMensajes.scrollHeight;
+
+                if (idsNoLeidos.length > 0) {
+                    await fetch("/api/mensajes/marcar-leido", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            ids: idsNoLeidos,
+                            usuario: usuario.correo
+                        })
+                    });
+                    await actualizarContadores();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function actualizarContadores() {
+            if (!usuario || !usuario.correo) return;
+            try {
+                const res = await fetch(`/api/mensajes/contadores?usuario=${encodeURIComponent(usuario.correo)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById("count-preguntas").textContent = data.noLeidosPreguntas || 0;
+                document.getElementById("count-sugerencias").textContent = data.noLeidosSugerencias || 0;
+
+                const total = (data.noLeidosPreguntas || 0) + (data.noLeidosSugerencias || 0);
+                document.getElementById("contador-total").style.display = total > 0 ? "flex" : "none";
+                document.getElementById("contador-total").textContent = total;
+
+                if (total > ultimoConteoTotal) {
+                    document.getElementById("sonido-mensaje").play().catch(() => {});
+                }
+                ultimoConteoTotal = total;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // ========== DIRECCIONES Y TELEFONOS ==========
+        document.getElementById("btn-ver-direcciones").onclick = async() => {
+            document.getElementById("modal-direcciones").style.display = "flex";
+            await cargarDirecciones();
+        };
+
+        document.getElementById("modal-direcciones-cerrar").onclick = () => {
+            document.getElementById("modal-direcciones").style.display = "none";
+        };
+
+        document.getElementById("btn-ver-telefonos").onclick = async() => {
+            document.getElementById("modal-telefonos").style.display = "flex";
+            await cargarTelefonos();
+        };
+
+        document.getElementById("modal-telefonos-cerrar").onclick = () => {
+            document.getElementById("modal-telefonos").style.display = "none";
+        };
+
+        async function cargarDirecciones() {
+            try {
+                const res = await fetch("/direcciones");
+                if (!res.ok) return;
+                const dirs = await res.json();
+                const lista = document.getElementById("lista-direcciones");
+
+                if (dirs.length === 0) {
+                    lista.innerHTML = "<p style='text-align:center; color:#999;'>No hay direcciones</p>";
+                    return;
+                }
+
+                lista.innerHTML = dirs.map(d => `
+                    <div style="background: white; border-left: 4px solid #E74C3C; border-radius: 8px; padding: 12px; margin: 8px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+                        <p style="margin: 0 0 6px 0; font-weight: 700; color: #2C3E50;">📍 ${d.calle} ${d.numero}</p>
+                        <p style="margin: 4px 0; font-size: 12px; color: #666;">📌 ${d.colonia}</p>
+                        <p style="margin: 4px 0; font-size: 12px; color: #666;">${d.ciudad}, ${d.estado}</p>
+                        ${d.cp ? `<p style="margin: 4px 0; font-size: 12px; color: #666;">📮 ${d.cp}</p>` : ''}
+                    </div>
+                `).join('');
+            } catch (err) {
+                document.getElementById("lista-direcciones").innerHTML = "<p style='color: red;'>Error al cargar</p>";
+            }
+        }
+
+        async function cargarTelefonos() {
+            try {
+                const res = await fetch("/telefonos");
+                if (!res.ok) return;
+                const tels = await res.json();
+                const lista = document.getElementById("lista-telefonos");
+                
+                if (tels.length === 0) {
+                    lista.innerHTML = "<p style='text-align:center; color:#999;'>No hay teléfonos</p>";
+                    return;
+                }
+                
+                lista.innerHTML = tels.map(t => {
+                    const num = t.numero || "";
+                    const numLimpio = num.replace(/\D/g, "");
+                    return `
+                        <div style="background: white; border-left: 4px solid #075E54; border-radius: 8px; padding: 12px; margin: 8px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+                            <p style="margin: 0 0 6px 0; font-weight: 700; color: #075E54;">
+                                <a href="tel:${numLimpio}" style="color: #075E54; text-decoration: none;">📱 ${num}</a>
+                            </p>
+                            ${t.descripcion ? `<p style="margin: 4px 0; font-size: 12px; color: #666;>${t.descripcion}</p>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                document.getElementById("lista-telefonos").innerHTML = "<p style='color: red;'>Error al cargar</p>";
+            }
+        }
+
+        // ========== INICIALIZACIÓN ==========
+        (async () => {
+            verificarUsuario();
+            cargarCarritoGuardado();
+            await cargarProductos();
+            
+            setTimeout(() => {
+                if (usuario) actualizarContadores();
+            }, 300);
+
+            setInterval(() => {
+                if (usuario) actualizarContadores();
+            }, 5000);
+
+            setInterval(() => {
+                if (chatVentana.style.display === "flex" && tipoChat) {
+                    cargarChat(tipoChat);
+                }
+            }, 5000);
+        })();
+    </script>
+</body>
+
+</html>

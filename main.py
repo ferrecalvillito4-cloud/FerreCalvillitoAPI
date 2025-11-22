@@ -16,6 +16,9 @@ import asyncio
 import productos_api as productos_module
 from productos_api import cargar_productos_api, guardar_productos_api, PRODUCTOS_FILE
 import productos_api as productos_module
+import traceback
+from datetime import datetime
+import contactos_persistencia as contactos
 
 # =============================
 # 🚀 Inicialización principal
@@ -57,34 +60,104 @@ oauth.register(
 @app.post("/api/productos/admin-upload")
 async def admin_upload_productos(data: list[dict]):
     """
-    Recibe lista de productos desde el admin y reemplaza la base interna del API.
+    Recibe lista de productos desde el admin y PERSISTE en productos.json
     """
     print(f"\n{'='*60}")
-    print(f"📤 RECIBIDO DATOS DE ADMIN:")
+    print(f"📤 ADMIN UPLOAD - RECIBIDO DESDE ADMIN")
+    print(f"   Timestamp: {datetime.now().isoformat()}")
     print(f"   Tipo: {type(data)}")
     print(f"   Cantidad: {len(data)}")
+    
+    if not data:
+        print(f"❌ Lista vacía recibida")
+        print(f"{'='*60}\n")
+        return {"ok": False, "error": "Lista de productos vacía"}
+    
+    # Mostrar primer item para verificación
     if data:
         print(f"   Primer item: {data[0]}")
+        print(f"   Campos: {list(data[0].keys())}")
     
-    # ✅ Actualizar la variable global en el módulo
-    productos_module.productos_api = data
-    print(f"✅ Variable global actualizada con {len(data)} items")
-    
-    # ✅ GUARDAR EN ARCHIVO
     try:
-        productos_module.guardar_productos_api()
-        print(f"💾 Archivo guardado correctamente")
+        # ✅ 1. Actualizar variable global (también guarda)
+        productos_module.actualizar_productos_api(data)
+        print(f"✅ Actualización completada")
+        
+        # ✅ 2. Verificación post-guardado
+        productos_guardados = productos_module.obtener_productos_api()
+        print(f"✅ Verificación: {len(productos_guardados)} productos en memoria")
+        
+        # ✅ 3. Verificación del archivo
+        if os.path.exists(productos_module.PRODUCTOS_FILE):
+            with open(productos_module.PRODUCTOS_FILE, "r", encoding="utf-8") as f:
+                contenido_archivo = json.load(f)
+            print(f"✅ Archivo verificado: {len(contenido_archivo)} productos")
+        
+        print(f"{'='*60}\n")
+        
+        return {
+            "ok": True,
+            "mensaje": f"✅ {len(data)} productos recibidos y guardados",
+            "guardados": len(productos_guardados),
+            "timestamp": datetime.now().isoformat()
+        }
+    
     except Exception as e:
-        print(f"❌ Error al guardar: {e}")
-        return {"ok": False, "error": str(e)}
-    
-    print(f"{'='*60}\n")
-    
-    return {
-        "ok": True, 
-        "mensaje": f"{len(data)} productos actualizados en la API",
-        "guardados": len(productos_module.productos_api)
-    }
+        print(f"❌ Error durante guardado: {e}")
+        print(f"   Stack: {traceback.format_exc()}")
+        print(f"{'='*60}\n")
+        return {
+            "ok": False,
+            "error": str(e),
+            "tipo": type(e).__name__
+        }
+
+
+# =============================
+# 🔍 ENDPOINT DE DEBUG (opcional pero muy útil)
+# =============================
+@app.get("/debug/productos-estado")
+async def debug_productos_estado():
+    """
+    Muestra el estado actual de productos en memoria y en archivo
+    """
+    try:
+        productos_memoria = productos_module.obtener_productos_api()
+        
+        archivo_existe = os.path.exists(productos_module.PRODUCTOS_FILE)
+        productos_archivo = []
+        if archivo_existe:
+            with open(productos_module.PRODUCTOS_FILE, "r", encoding="utf-8") as f:
+                productos_archivo = json.load(f)
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "memoria": {
+                "total": len(productos_memoria),
+                "primero": productos_memoria[0] if productos_memoria else None,
+                "archivo_path": productos_module.PRODUCTOS_FILE
+            },
+            "archivo": {
+                "existe": archivo_existe,
+                "total": len(productos_archivo),
+                "primero": productos_archivo[0] if productos_archivo else None
+            },
+            "sincronizado": len(productos_memoria) == len(productos_archivo)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# =============================
+# 🧹 LIMPIAR PRODUCTOS (admin)
+# =============================
+@app.delete("/api/productos/limpiar")
+async def limpiar_productos():
+    """
+    ⚠️ CUIDADO: Elimina TODOS los productos
+    """
+    productos_module.limpiar_productos()
+    return {"ok": True, "mensaje": "Todos los productos han sido eliminados"}
 
 
 @app.get("/auth/google/login")
@@ -174,11 +247,42 @@ def leer_cadena_conexion():
 # =============================
 @app.get("/", response_class=HTMLResponse)
 async def index():
+    """
+    Página de redirección automática a móvil o laptop
+    """
+    html_path = os.path.join(static_dir, "redirect.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    
+    # Si no existe redirect.html, mostrar versión laptop por defecto
+    laptop_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(laptop_path):
+        with open(laptop_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    
+    return HTMLResponse("<h1>Bienvenido a Ferre-Calvillito API</h1>")
+
+# =============================
+# 📱 Acceso directo a versiones
+# =============================
+@app.get("/mobile", response_class=HTMLResponse)
+async def index_mobile():
+    """Fuerza la versión móvil"""
+    html_path = os.path.join(static_dir, "index-mobile.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    return HTMLResponse("<h1>Error: index-mobile.html no encontrado</h1>", status_code=404)
+
+@app.get("/desktop", response_class=HTMLResponse)
+async def index_desktop():
+    """Fuerza la versión desktop/laptop"""
     html_path = os.path.join(static_dir, "index.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
             return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
-    return HTMLResponse("<h1>Bienvenido a Ferre-Calvillito API</h1>")
+    return HTMLResponse("<h1>Error: index.html no encontrado</h1>", status_code=404)
 
 # =============================
 # 📦 Productos
@@ -454,128 +558,300 @@ def guardar_telefonos():
 # =============================
 @app.get("/direcciones")
 async def obtener_direcciones():
-    """Obtiene todas las direcciones"""
-    return direcciones
+    """Obtiene todas las direcciones (desde archivo persistente)"""
+    try:
+        dirs = contactos.obtener_direcciones()
+        print(f"📍 GET /direcciones - Devolviendo {len(dirs)} direcciones")
+        return JSONResponse(
+            content=dirs,
+            media_type="application/json; charset=utf-8"
+        )
+    except Exception as e:
+        print(f"❌ Error en GET /direcciones: {e}")
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500
+        )
 
 @app.get("/direcciones/{id}")
 async def obtener_direccion(id: str):
     """Obtiene una dirección específica por ID"""
-    direccion = next((d for d in direcciones if d.get("id") == id), None)
-    if not direccion:
-        return JSONResponse({"error": "Dirección no encontrada"}, status_code=404)
-    return direccion
+    try:
+        dirs = contactos.obtener_direcciones()
+        direccion = next((d for d in dirs if d.get("id") == id), None)
+        
+        if not direccion:
+            return JSONResponse(
+                {"error": "Dirección no encontrada"},
+                status_code=404
+            )
+        
+        return JSONResponse(content=direccion)
+    except Exception as e:
+        print(f"❌ Error en GET /direcciones/{id}: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/direcciones")
 async def agregar_direccion(data: Direccion):
-    """Agrega una nueva dirección"""
-    nueva_direccion = {
-        "id": str(uuid4()),
-        "calle": data.calle,
-        "numero": data.numero,
-        "colonia": data.colonia,
-        "ciudad": data.ciudad,
-        "estado": data.estado,
-        "cp": data.cp,
-        "fecha_creacion": datetime.now().isoformat()
-    }
-    direcciones.append(nueva_direccion)
-    guardar_direcciones()
-    print(f"📍 Dirección agregada: {nueva_direccion}")
-    return {"ok": True, "mensaje": "Dirección agregada correctamente", "direccion": nueva_direccion}
+    """Agrega una nueva dirección y la PERSISTE"""
+    try:
+        print(f"\n📍 POST /direcciones")
+        print(f"   Calle: {data.calle}")
+        print(f"   Número: {data.numero}")
+        
+        nueva_dir = contactos.agregar_direccion(
+            calle=data.calle,
+            numero=data.numero,
+            colonia=data.colonia,
+            ciudad=data.ciudad,
+            estado=data.estado,
+            cp=data.cp
+        )
+        
+        return JSONResponse(
+            content={
+                "ok": True,
+                "mensaje": "Dirección agregada correctamente",
+                "direccion": nueva_dir
+            },
+            status_code=201
+        )
+    except Exception as e:
+        print(f"❌ Error en POST /direcciones: {e}")
+        return JSONResponse(
+            {"ok": False, "error": str(e)},
+            status_code=500
+        )
+
 
 @app.put("/direcciones/{id}")
 async def actualizar_direccion(id: str, data: Direccion):
-    """Actualiza una dirección existente"""
-    direccion = next((d for d in direcciones if d.get("id") == id), None)
-    if not direccion:
-        return JSONResponse({"error": "Dirección no encontrada"}, status_code=404)
-    
-    direccion.update({
-        "calle": data.calle,
-        "numero": data.numero,
-        "colonia": data.colonia,
-        "ciudad": data.ciudad,
-        "estado": data.estado,
-        "cp": data.cp,
-        "fecha_actualizacion": datetime.now().isoformat()
-    })
-    
-    guardar_direcciones()
-    print(f"📝 Dirección actualizada: {direccion}")
-    return {"ok": True, "mensaje": "Dirección actualizada correctamente", "direccion": direccion}
+    """Actualiza una dirección existente y la PERSISTE"""
+    try:
+        print(f"\n📍 PUT /direcciones/{id}")
+        print(f"   Nueva calle: {data.calle}")
+        
+        direccion = contactos.actualizar_direccion(
+            id_dir=id,
+            calle=data.calle,
+            numero=data.numero,
+            colonia=data.colonia,
+            ciudad=data.ciudad,
+            estado=data.estado,
+            cp=data.cp
+        )
+        
+        if not direccion:
+            return JSONResponse(
+                {"error": "Dirección no encontrada"},
+                status_code=404
+            )
+        
+        return JSONResponse(
+            content={
+                "ok": True,
+                "mensaje": "Dirección actualizada correctamente",
+                "direccion": direccion
+            }
+        )
+    except Exception as e:
+        print(f"❌ Error en PUT /direcciones/{id}: {e}")
+        return JSONResponse(
+            {"ok": False, "error": str(e)},
+            status_code=500
+        )
 
 @app.delete("/direcciones/{id}")
 async def eliminar_direccion(id: str):
-    """Elimina una dirección"""
-    global direcciones
-    direccion = next((d for d in direcciones if d.get("id") == id), None)
-    if not direccion:
-        return JSONResponse({"error": "Dirección no encontrada"}, status_code=404)
-    
-    direcciones = [d for d in direcciones if d.get("id") != id]
-    guardar_direcciones()
-    print(f"🗑️ Dirección eliminada: {id}")
-    return {"ok": True, "mensaje": "Dirección eliminada correctamente"}
+    """Elimina una dirección y PERSISTE el cambio"""
+    try:
+        print(f"\n📍 DELETE /direcciones/{id}")
+        
+        # Verificar que existe
+        dirs = contactos.obtener_direcciones()
+        if not any(d.get("id") == id for d in dirs):
+            return JSONResponse(
+                {"error": "Dirección no encontrada"},
+                status_code=404
+            )
+        
+        contactos.eliminar_direccion(id)
+        
+        return JSONResponse(
+            content={
+                "ok": True,
+                "mensaje": "Dirección eliminada correctamente"
+            }
+        )
+    except Exception as e:
+        print(f"❌ Error en DELETE /direcciones/{id}: {e}")
+        return JSONResponse(
+            {"ok": False, "error": str(e)},
+            status_code=500
+        )
 
 # =============================
 # ENDPOINTS DE TELÉFONOS
 # =============================
 @app.get("/telefonos")
 async def obtener_telefonos():
-    """Obtiene todos los teléfonos"""
-    return telefonos
+    """Obtiene todos los teléfonos (desde archivo persistente)"""
+    try:
+        tels = contactos.obtener_telefonos()
+        print(f"📞 GET /telefonos - Devolviendo {len(tels)} teléfonos")
+        return JSONResponse(
+            content=tels,
+            media_type="application/json; charset=utf-8"
+        )
+    except Exception as e:
+        print(f"❌ Error en GET /telefonos: {e}")
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500
+        )
 
 @app.get("/telefonos/{id}")
 async def obtener_telefono(id: str):
     """Obtiene un teléfono específico por ID"""
-    telefono = next((t for t in telefonos if t.get("id") == id), None)
-    if not telefono:
-        return JSONResponse({"error": "Teléfono no encontrado"}, status_code=404)
-    return telefono
+    try:
+        tels = contactos.obtener_telefonos()
+        telefono = next((t for t in tels if t.get("id") == id), None)
+        
+        if not telefono:
+            return JSONResponse(
+                {"error": "Teléfono no encontrado"},
+                status_code=404
+            )
+        
+        return JSONResponse(content=telefono)
+    except Exception as e:
+        print(f"❌ Error en GET /telefonos/{id}: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/telefonos")
 async def agregar_telefono(data: Telefono):
-    """Agrega un nuevo teléfono"""
-    nuevo_telefono = {
-        "id": str(uuid4()),
-        "numero": data.numero,
-        "descripcion": data.descripcion,
-        "fecha_creacion": datetime.now().isoformat()
-    }
-    telefonos.append(nuevo_telefono)
-    guardar_telefonos()
-    print(f"📞 Teléfono agregado: {nuevo_telefono}")
-    return {"ok": True, "mensaje": "Teléfono agregado correctamente", "telefono": nuevo_telefono}
+    """Agrega un nuevo teléfono y lo PERSISTE"""
+    try:
+        print(f"\n📞 POST /telefonos")
+        print(f"   Número: {data.numero}")
+        print(f"   Descripción: {data.descripcion}")
+        
+        nuevo_tel = contactos.agregar_telefono(
+            numero=data.numero,
+            descripcion=data.descripcion
+        )
+        
+        return JSONResponse(
+            content={
+                "ok": True,
+                "mensaje": "Teléfono agregado correctamente",
+                "telefono": nuevo_tel
+            },
+            status_code=201
+        )
+    except Exception as e:
+        print(f"❌ Error en POST /telefonos: {e}")
+        return JSONResponse(
+            {"ok": False, "error": str(e)},
+            status_code=500
+        )
 
 @app.put("/telefonos/{id}")
 async def actualizar_telefono(id: str, data: Telefono):
-    """Actualiza un teléfono existente"""
-    telefono = next((t for t in telefonos if t.get("id") == id), None)
-    if not telefono:
-        return JSONResponse({"error": "Teléfono no encontrado"}, status_code=404)
-    
-    telefono.update({
-        "numero": data.numero,
-        "descripcion": data.descripcion,
-        "fecha_actualizacion": datetime.now().isoformat()
-    })
-    
-    guardar_telefonos()
-    print(f"📝 Teléfono actualizado: {telefono}")
-    return {"ok": True, "mensaje": "Teléfono actualizado correctamente", "telefono": telefono}
+    """Actualiza un teléfono existente y lo PERSISTE"""
+    try:
+        print(f"\n📞 PUT /telefonos/{id}")
+        print(f"   Nuevo número: {data.numero}")
+        
+        telefono = contactos.actualizar_telefono(
+            id_tel=id,
+            numero=data.numero,
+            descripcion=data.descripcion
+        )
+        
+        if not telefono:
+            return JSONResponse(
+                {"error": "Teléfono no encontrado"},
+                status_code=404
+            )
+        
+        return JSONResponse(
+            content={
+                "ok": True,
+                "mensaje": "Teléfono actualizado correctamente",
+                "telefono": telefono
+            }
+        )
+    except Exception as e:
+        print(f"❌ Error en PUT /telefonos/{id}: {e}")
+        return JSONResponse(
+            {"ok": False, "error": str(e)},
+            status_code=500
+        )
 
 @app.delete("/telefonos/{id}")
 async def eliminar_telefono(id: str):
-    """Elimina un teléfono"""
-    global telefonos
-    telefono = next((t for t in telefonos if t.get("id") == id), None)
-    if not telefono:
-        return JSONResponse({"error": "Teléfono no encontrado"}, status_code=404)
-    
-    telefonos = [t for t in telefonos if t.get("id") != id]
-    guardar_telefonos()
-    print(f"🗑️ Teléfono eliminado: {id}")
-    return {"ok": True, "mensaje": "Teléfono eliminado correctamente"}
+    """Elimina un teléfono y PERSISTE el cambio"""
+    try:
+        print(f"\n📞 DELETE /telefonos/{id}")
+        
+        # Verificar que existe
+        tels = contactos.obtener_telefonos()
+        if not any(t.get("id") == id for t in tels):
+            return JSONResponse(
+                {"error": "Teléfono no encontrado"},
+                status_code=404
+            )
+        
+        contactos.eliminar_telefono(id)
+        
+        return JSONResponse(
+            content={
+                "ok": True,
+                "mensaje": "Teléfono eliminado correctamente"
+            }
+        )
+    except Exception as e:
+        print(f"❌ Error en DELETE /telefonos/{id}: {e}")
+        return JSONResponse(
+            {"ok": False, "error": str(e)},
+            status_code=500
+        )
+
+@app.get("/debug/contactos-estado")
+async def debug_contactos_estado():
+    """Muestra el estado actual de direcciones y teléfonos"""
+    try:
+        dirs_mem = contactos.obtener_direcciones()
+        tels_mem = contactos.obtener_telefonos()
+        
+        dirs_arch = []
+        if os.path.exists(contactos.DIRECCIONES_FILE):
+            with open(contactos.DIRECCIONES_FILE, "r", encoding="utf-8") as f:
+                dirs_arch = json.load(f)
+        
+        tels_arch = []
+        if os.path.exists(contactos.TELEFONOS_FILE):
+            with open(contactos.TELEFONOS_FILE, "r", encoding="utf-8") as f:
+                tels_arch = json.load(f)
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "direcciones": {
+                "memoria": len(dirs_mem),
+                "archivo": len(dirs_arch),
+                "sincronizado": len(dirs_mem) == len(dirs_arch),
+                "primero": dirs_mem[0] if dirs_mem else None
+            },
+            "telefonos": {
+                "memoria": len(tels_mem),
+                "archivo": len(tels_arch),
+                "sincronizado": len(tels_mem) == len(tels_arch),
+                "primero": tels_mem[0] if tels_mem else None
+            }
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 # =============================
 # 🚀 Evento de inicio (ACTUALIZADO)
@@ -584,18 +860,13 @@ async def eliminar_telefono(id: str):
 async def startup_event():
     print("\n🚀 Ferre-Calvillito API iniciada correctamente")
     print(f"📁 Ruta base: {os.path.dirname(__file__)}")
-    print(f"📁 PRODUCTOS_FILE: {productos_module.PRODUCTOS_FILE}")
-    print(f"   Existe: {os.path.exists(productos_module.PRODUCTOS_FILE)}")
     
-    cargar_datos()            # 🔹 Cargar direcciones y teléfonos
-    cargar_productos_api()    # 🔹 Cargar productos del archivo
+    # ✅ Cargar TODO desde archivos persistentes
+    contactos.cargar_direcciones()
+    contactos.cargar_telefonos()
+    cargar_productos_api()
     
-    # 🔍 DEBUG: Ver estado inicial
-    print(f"📦 Productos cargados en startup: {len(productos_module.productos_api)}")
-    if productos_module.productos_api:
-        print(f"   Primer producto: {productos_module.productos_api[0]}")
-    
-    limpiar_mensajes_antiguos()  # 🔹 Limpiar mensajes antiguos al inicio
-    asyncio.create_task(tarea_limpieza_periodica())  # 🔹 Tarea periódica de limpieza
+    limpiar_mensajes_antiguos()
+    asyncio.create_task(tarea_limpieza_periodica())
     
     print("✅ API lista\n")
