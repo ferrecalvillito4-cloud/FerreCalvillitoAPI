@@ -954,7 +954,22 @@
                     const div = document.createElement("div");
                     const esAdmin = m.origen === "admin";
                     div.className = esAdmin ? "msg-admin" : "msg-user";
-                    div.textContent = m.mensaje || "(mensaje vacío)";
+
+                    const fecha = m.fecha || new Date().toISOString();
+                    const fechaObj = new Date(fecha);
+                    const dia = fechaObj.toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit'
+                    });
+                    const hora = fechaObj.toLocaleTimeString('es-MX', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+
+                    const texto = m.mensaje || "(mensaje vacío)";
+                    div.innerHTML = `${texto}<br><small style="font-size:10px; opacity:0.7; margin-top:4px; display:block;">📅 ${dia} ${hora}</small>`;
                     chatMensajes.appendChild(div);
                     if (esAdmin && !m.leido) idsNoLeidos.push(m.id);
                 });
