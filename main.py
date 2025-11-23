@@ -19,6 +19,11 @@ import productos_api as productos_module
 import traceback
 from datetime import datetime
 import contactos_persistencia as contactos
+import github_persistence as gh
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # =============================
 # 🚀 Inicialización principal
@@ -59,9 +64,6 @@ oauth.register(
 
 @app.post("/api/productos/admin-upload")
 async def admin_upload_productos(data: list[dict]):
-    """
-    Recibe lista de productos desde el admin y PERSISTE en productos.json
-    """
     print(f"\n{'='*60}")
     print(f"📤 ADMIN UPLOAD - RECIBIDO DESDE ADMIN")
     print(f"   Timestamp: {datetime.now().isoformat()}")
@@ -73,7 +75,6 @@ async def admin_upload_productos(data: list[dict]):
         print(f"{'='*60}\n")
         return {"ok": False, "error": "Lista de productos vacía"}
     
-    # Mostrar primer item para verificación
     if data:
         print(f"   Primer item: {data[0]}")
         print(f"   Campos: {list(data[0].keys())}")
@@ -93,11 +94,15 @@ async def admin_upload_productos(data: list[dict]):
                 contenido_archivo = json.load(f)
             print(f"✅ Archivo verificado: {len(contenido_archivo)} productos")
         
+        # ✅ NUEVO: Sincronizar con GitHub
+        gh.guardar_productos_github(data)
+        print(f"🌐 Sincronizado con GitHub")
+        
         print(f"{'='*60}\n")
         
         return {
             "ok": True,
-            "mensaje": f"✅ {len(data)} productos recibidos y guardados",
+            "mensaje": f"✅ {len(data)} productos recibidos, guardados y sincronizados",
             "guardados": len(productos_guardados),
             "timestamp": datetime.now().isoformat()
         }
@@ -868,12 +873,20 @@ async def startup_event():
     print("\n🚀 Ferre-Calvillito API iniciada correctamente")
     print(f"📁 Ruta base: {os.path.dirname(__file__)}")
     
-    # ✅ Cargar TODO desde archivos persistentes
+    # ✅ Inicializar GitHub persistence
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    os.makedirs(data_dir, exist_ok=True)
+    gh.inicializar_github(data_dir)
+    
+    # ✅ Cargar TODO desde GitHub (con fallback local)
+    global productos_api
+    productos_api = gh.cargar_productos_github()
+    
     contactos.cargar_direcciones()
     contactos.cargar_telefonos()
-    cargar_productos_api()
     
     limpiar_mensajes_antiguos()
     asyncio.create_task(tarea_limpieza_periodica())
     
+    print(f"✅ Cargados {len(productos_api)} productos desde GitHub")
     print("✅ API lista\n")
