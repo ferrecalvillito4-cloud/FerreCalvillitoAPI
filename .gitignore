@@ -1,22 +1,37 @@
-# Carpeta de Visual Studio
-.vs/
+# Entorno
+.env
+.env.local
+.env.*.local
 
-# Entorno virtual de python
-env/
-env*/ 
-
-# __pycache__ basura de Python
+# Python
 __pycache__/
-
-# Archivos sensibles
-*.env
-
-# Archivos de Python temporales
 *.pyc
-
-# Mypy cache
+*.pyo
+*.egg-info/
 .mypy_cache/
+.pytest_cache/
+.venv/
+venv/
+ENV/
 
-# Archivos de configuración de usuario
-*.sln
-*.vsidx
+# IDE
+.vscode/
+.idea/
+.vs/
+*.swp
+*.swo
+
+# Datos sensibles
+usuarios.json
+conexion_actual.txt
+fbclient.dll
+
+# Aplicación
+backups/
+data/
+logs/
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.db
