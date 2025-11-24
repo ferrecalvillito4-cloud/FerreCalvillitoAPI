@@ -1,4 +1,16 @@
-﻿from fastapi import FastAPI, Request, Body
+﻿import os
+import json
+import threading
+from datetime import datetime, timedelta
+from uuid import uuid4
+import asyncio
+import traceback
+
+# Importar módulos de persistencia
+import productos_api as productos_module
+import contactos_persistencia as contactos
+import github_persistence as gh
+from fastapi import FastAPI, Request, Body
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,29 +19,38 @@ from pydantic import BaseModel, Field
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 import fdb
-import itsdangerous
-import os
-import json
-from datetime import datetime, timedelta
-from uuid import uuid4
-import asyncio
-import productos_api as productos_module
-from productos_api import cargar_productos_api, guardar_productos_api, PRODUCTOS_FILE
-import productos_api as productos_module
-import traceback
-from datetime import datetime
-import contactos_persistencia as contactos
-import github_persistence as gh
-from dotenv import load_dotenv
-
-# Cargar variables de entorno
-load_dotenv()
 
 # =============================
 # 🚀 Inicialización principal
 # =============================
-app = FastAPI(title="Ferre-Calvillito API")
 load_dotenv()
+
+# =============================
+# 📁 Rutas de archivos (PRIMERO)
+# =============================
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(SCRIPT_DIR, "conexion_actual.txt")
+PRODUCTOS_FILE = os.path.join(SCRIPT_DIR, "productos.json")
+DIRECCIONES_FILE = os.path.join(SCRIPT_DIR, "direcciones.json")
+TELEFONOS_FILE = os.path.join(SCRIPT_DIR, "telefonos.json")
+BACKUP_DIR = os.path.join(SCRIPT_DIR, "backups")
+DATA_DIR = os.path.join(SCRIPT_DIR, "data")
+
+# Crear directorios necesarios
+os.makedirs(BACKUP_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# =============================
+# 📁 Archivos estáticos
+# =============================
+static_dir = os.path.join(SCRIPT_DIR, "static")
+os.makedirs(static_dir, exist_ok=True)
+
+# =============================
+# 🚀 Crear aplicación FastAPI
+# =============================
+app = FastAPI(title="Ferre-Calvillito API")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # =============================
 # 🔒 Configuración de CORS
@@ -62,108 +83,260 @@ oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
+# =============================
+# 🔥 Cargar cliente Firebird
+# =============================
+try:
+    dll_path = os.path.join(SCRIPT_DIR, "fbclient.dll")
+    if os.path.exists(dll_path):
+        fdb.load_api(dll_path)
+        print(f"🧩 fbclient.dll cargado desde: {dll_path}")
+    else:
+        print("⚠️ No se encontró fbclient.dll en el directorio del proyecto.")
+except Exception as e:
+    print("❌ Error al cargar fbclient.dll:", e)
+
+# =============================
+# 🧠 Estado Global
+# =============================
+mensajes: list[dict] = []
+direcciones: list[dict] = []
+telefonos: list[dict] = []
+productos_api: list[dict] = []
+
+# =============================
+# 🧠 Leer cadena de conexión
+# =============================
+def leer_cadena_conexion():
+    if not os.path.exists(CONFIG_PATH):
+        return None
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        contenido = f.read().strip()
+    if not contenido:
+        return None
+    partes = {k.strip().lower(): v.strip() for k, v in (s.split("=", 1) for s in contenido.split(";") if "=" in s)}
+    return partes if "database" in partes else None
+
+# =============================
+# 🗑️ Limpieza de mensajes
+# =============================
+def limpiar_mensajes_antiguos():
+    """Elimina mensajes con más de 30 días de antigüedad"""
+    global mensajes
+    fecha_limite = datetime.now() - timedelta(days=30)
+    cantidad_inicial = len(mensajes)
+    
+    mensajes = [
+        m for m in mensajes 
+        if m.get("fecha") and m["fecha"] > fecha_limite
+    ]
+    
+    cantidad_eliminada = cantidad_inicial - len(mensajes)
+    if cantidad_eliminada > 0:
+        print(f"🗑️ Eliminados {cantidad_eliminada} mensajes antiguos (>30 días)")
+    
+    return cantidad_eliminada
+
+async def tarea_limpieza_periodica():
+    """Ejecuta la limpieza cada 24 horas"""
+    while True:
+        await asyncio.sleep(86400)  # 24 horas
+        limpiar_mensajes_antiguos()
+
+# =============================
+# 🚀 EVENTO DE STARTUP (CORREGIDO)
+# =============================
+
+@app.on_event("startup")
+async def startup_event():
+    """✅ STARTUP COMPLETAMENTE FUNCIONAL"""
+    global productos_api, direcciones, telefonos, mensajes
+    
+    print("\n" + "="*80)
+    print("🚀 INICIANDO FERRE-CALVILLITO API")
+    print("="*80)
+    
+    try:
+        # 1️⃣ Inicializar GitHub
+        print("\n📦 PASO 1: Inicializando GitHub Persistence...")
+        gh.inicializar_github(DATA_DIR)
+        print("   ✅ GitHub Persistence inicializado")
+        
+        # 2️⃣ Inicializar módulo de productos
+        print("\n📊 PASO 2: Inicializando módulo de productos...")
+        try:
+            productos_module.cargar_productos_api()
+            print(f"   ✅ Módulo de productos inicializado")
+        except Exception as e:
+            print(f"   ⚠️ Error: {e}")
+        # 2️⃣B Cargar productos desde GitHub
+        print("\n📊 PASO 2B: Cargando productos...")
+        try:
+            productos_api = gh.cargar_productos_github()
+            print(f"   ✅ {len(productos_api)} productos cargados")
+        except Exception as e:
+            print(f"   ⚠️ Error: {e}")
+            productos_api = []
+        
+        # 3️⃣ Cargar direcciones
+        print("\n📍 PASO 3: Cargando direcciones...")
+        try:
+            contactos.cargar_direcciones()
+            direcciones = contactos.obtener_direcciones()
+            print(f"   ✅ {len(direcciones)} direcciones cargadas")
+        except Exception as e:
+            print(f"   ⚠️ Error: {e}")
+            direcciones = []
+        
+        # 4️⃣ Cargar teléfonos
+        print("\n📞 PASO 4: Cargando teléfonos...")
+        try:
+            contactos.cargar_telefonos()
+            telefonos = contactos.obtener_telefonos()
+            print(f"   ✅ {len(telefonos)} teléfonos cargados")
+        except Exception as e:
+            print(f"   ⚠️ Error: {e}")
+            telefonos = []
+        
+        # 5️⃣ Limpiar mensajes
+        print("\n💬 PASO 5: Limpiando mensajes...")
+        limpiar_mensajes_antiguos()
+        print(f"   ✅ Mensajes: {len(mensajes)} activos")
+        
+        # 6️⃣ Iniciar tareas periódicas
+        print("\n⏱️ PASO 6: Iniciando tareas periódicas...")
+        asyncio.create_task(tarea_limpieza_periodica())
+        print("   ✅ Tarea de limpieza programada (cada 24h)")
+        
+        # 7️⃣ Resumen
+        print("\n" + "="*80)
+        print("✅ API LISTA PARA USAR")
+        print("="*80)
+        print(f"📊 Productos: {len(productos_api)}")
+        print(f"📍 Direcciones: {len(direcciones)}")
+        print(f"📞 Teléfonos: {len(telefonos)}")
+        print(f"💬 Mensajes: {len(mensajes)}")
+        print(f"📁 Base: {SCRIPT_DIR}")
+        print("="*80 + "\n")
+        
+    except Exception as e:
+        print(f"\n❌ ERROR EN STARTUP:")
+        print(f"{traceback.format_exc()}\n")
+
+# =============================
+# 🛌 EVENTO DE SHUTDOWN
+# =============================
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Se ejecuta al apagar la API"""
+    print("\n🛑 APAGANDO FERRE-CALVILLITO API")
+    print("   ✅ Limpieza completada\n")
+
+# =============================
+# 🏠 ENDPOINTS BÁSICOS
+# =============================
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    """Página de redirección automática"""
+    html_path = os.path.join(static_dir, "redirect.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    
+    laptop_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(laptop_path):
+        with open(laptop_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    
+    return HTMLResponse("<h1>Bienvenido a Ferre-Calvillito API</h1>")
+
+@app.get("/mobile", response_class=HTMLResponse)
+async def index_mobile():
+    """Versión móvil"""
+    html_path = os.path.join(static_dir, "index-mobile.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    return HTMLResponse("<h1>Error: index-mobile.html no encontrado</h1>", status_code=404)
+
+@app.get("/desktop", response_class=HTMLResponse)
+async def index_desktop():
+    """Versión desktop"""
+    html_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    return HTMLResponse("<h1>Error: index.html no encontrado</h1>", status_code=404)
+
+# =============================
+# 📦 PRODUCTOS
+# =============================
+
+@app.get("/producto")
+async def obtener_productos():
+    """Devuelve todos los productos"""
+    productos = gh.cargar_productos_github()
+    print(f"🔍 GET /producto - Devolviendo {len(productos)} productos")
+    return JSONResponse(
+        content=productos,
+        media_type="application/json; charset=utf-8"
+    )
+
 @app.post("/api/productos/admin-upload")
 async def admin_upload_productos(data: list[dict]):
+    """Admin upload de productos"""
+    global productos_api
+    
     print(f"\n{'='*60}")
-    print(f"📤 ADMIN UPLOAD - RECIBIDO DESDE ADMIN")
-    print(f"   Timestamp: {datetime.now().isoformat()}")
-    print(f"   Tipo: {type(data)}")
+    print(f"📤 ADMIN UPLOAD")
     print(f"   Cantidad: {len(data)}")
     
     if not data:
-        print(f"❌ Lista vacía recibida")
-        print(f"{'='*60}\n")
-        return {"ok": False, "error": "Lista de productos vacía"}
-    
-    if data:
-        print(f"   Primer item: {data[0]}")
-        print(f"   Campos: {list(data[0].keys())}")
+        return {"ok": False, "error": "Lista vacía"}
     
     try:
-        # ✅ 1. Actualizar variable global (también guarda)
-        productos_module.actualizar_productos_api(data)
-        print(f"✅ Actualización completada")
+        # Actualizar memoria
+        productos_api = data
         
-        # ✅ 2. Verificación post-guardado
-        productos_guardados = productos_module.obtener_productos_api()
-        print(f"✅ Verificación: {len(productos_guardados)} productos en memoria")
-        
-        # ✅ 3. Verificación del archivo
-        if os.path.exists(productos_module.PRODUCTOS_FILE):
-            with open(productos_module.PRODUCTOS_FILE, "r", encoding="utf-8") as f:
-                contenido_archivo = json.load(f)
-            print(f"✅ Archivo verificado: {len(contenido_archivo)} productos")
-        
-        # ✅ NUEVO: Sincronizar con GitHub
+        # Guardar en GitHub
         gh.guardar_productos_github(data)
-        print(f"🌐 Sincronizado con GitHub")
         
+        print(f"✅ Actualización completada")
         print(f"{'='*60}\n")
         
         return {
             "ok": True,
-            "mensaje": f"✅ {len(data)} productos recibidos, guardados y sincronizados",
-            "guardados": len(productos_guardados),
+            "mensaje": f"✅ {len(data)} productos guardados y sincronizados",
+            "guardados": len(data),
             "timestamp": datetime.now().isoformat()
         }
     
     except Exception as e:
-        print(f"❌ Error durante guardado: {e}")
-        print(f"   Stack: {traceback.format_exc()}")
-        print(f"{'='*60}\n")
-        return {
-            "ok": False,
-            "error": str(e),
-            "tipo": type(e).__name__
-        }
+        print(f"❌ Error: {e}\n")
+        return {"ok": False, "error": str(e)}
 
-
-# =============================
-# 🔍 ENDPOINT DE DEBUG (opcional pero muy útil)
-# =============================
 @app.get("/debug/productos-estado")
 async def debug_productos_estado():
-    """
-    Muestra el estado actual de productos en memoria y en archivo
-    """
-    try:
-        productos_memoria = productos_module.obtener_productos_api()
-        
-        archivo_existe = os.path.exists(productos_module.PRODUCTOS_FILE)
-        productos_archivo = []
-        if archivo_existe:
-            with open(productos_module.PRODUCTOS_FILE, "r", encoding="utf-8") as f:
-                productos_archivo = json.load(f)
-        
-        return {
-            "timestamp": datetime.now().isoformat(),
-            "memoria": {
-                "total": len(productos_memoria),
-                "primero": productos_memoria[0] if productos_memoria else None,
-                "archivo_path": productos_module.PRODUCTOS_FILE
-            },
-            "archivo": {
-                "existe": archivo_existe,
-                "total": len(productos_archivo),
-                "primero": productos_archivo[0] if productos_archivo else None
-            },
-            "sincronizado": len(productos_memoria) == len(productos_archivo)
-        }
-    except Exception as e:
-        return {"error": str(e)}
+    """Debug de estado de productos"""
+    productos = gh.cargar_productos_github()
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "productos_memoria": len(productos_api),
+        "github_estado": gh.debug_estado_github(),
+        "primero": productos[0] if productos else None
+    }
 
-
-# =============================
-# 🧹 LIMPIAR PRODUCTOS (admin)
-# =============================
 @app.delete("/api/productos/limpiar")
 async def limpiar_productos():
-    """
-    ⚠️ CUIDADO: Elimina TODOS los productos
-    """
+    """⚠️ Elimina TODOS los productos"""
     productos_module.limpiar_productos()
     return {"ok": True, "mensaje": "Todos los productos han sido eliminados"}
 
+# =============================
+# 🔐 OAUTH GOOGLE
+# =============================
 
 @app.get("/auth/google/login")
 async def login_google(request: Request):
@@ -182,7 +355,7 @@ async def auth_google_callback(request: Request):
         return JSONResponse({"error": "No se pudo obtener el usuario"}, status_code=400)
 
     # Guardar usuario localmente
-    users_path = os.path.join(os.path.dirname(__file__), "usuarios.json")
+    users_path = os.path.join(SCRIPT_DIR, "usuarios.json")
     users = []
     if os.path.exists(users_path):
         try:
@@ -213,140 +386,20 @@ async def auth_google_callback(request: Request):
     return HTMLResponse(content=html)
 
 # =============================
-# 📁 Archivos estáticos
+# 💬 MENSAJES
 # =============================
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-os.makedirs(static_dir, exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "conexion_actual.txt")
-
-# =============================
-# 🔥 Cargar cliente Firebird
-# =============================
-try:
-    dll_path = os.path.join(os.path.dirname(__file__), "fbclient.dll")
-    if os.path.exists(dll_path):
-        fdb.load_api(dll_path)
-        print(f"🧩 fbclient.dll cargado desde: {dll_path}")
-    else:
-        print("⚠️ No se encontró fbclient.dll en el directorio del proyecto.")
-except Exception as e:
-    print("❌ Error al cargar fbclient.dll:", e)
-
-# =============================
-# 🧠 Leer cadena de conexión
-# =============================
-def leer_cadena_conexion():
-    if not os.path.exists(CONFIG_PATH):
-        return None
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        contenido = f.read().strip()
-    if not contenido:
-        return None
-    partes = {k.strip().lower(): v.strip() for k, v in (s.split("=", 1) for s in contenido.split(";") if "=" in s)}
-    return partes if "database" in partes else None
-
-# =============================
-# 🏠 Página principal
-# =============================
-@app.get("/", response_class=HTMLResponse)
-async def index():
-    """
-    Página de redirección automática a móvil o laptop
-    """
-    html_path = os.path.join(static_dir, "redirect.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
-    
-    # Si no existe redirect.html, mostrar versión laptop por defecto
-    laptop_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(laptop_path):
-        with open(laptop_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
-    
-    return HTMLResponse("<h1>Bienvenido a Ferre-Calvillito API</h1>")
-
-# =============================
-# 📱 Acceso directo a versiones
-# =============================
-@app.get("/mobile", response_class=HTMLResponse)
-async def index_mobile():
-    """Fuerza la versión móvil"""
-    html_path = os.path.join(static_dir, "index-mobile.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
-    return HTMLResponse("<h1>Error: index-mobile.html no encontrado</h1>", status_code=404)
-
-@app.get("/desktop", response_class=HTMLResponse)
-async def index_desktop():
-    """Fuerza la versión desktop/laptop"""
-    html_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
-    return HTMLResponse("<h1>Error: index.html no encontrado</h1>", status_code=404)
-
-# =============================
-# 📦 Productos
-# =============================
-@app.get("/producto")
-async def obtener_productos():
-    """
-    Devuelve todos los productos
-    """
-    productos = productos_module.obtener_productos_api()
-    print(f"🔍 GET /producto - Devolviendo {len(productos)} productos")
-    return JSONResponse(
-        content=productos, 
-        media_type="application/json; charset=utf-8"
-    )
-
-# ================================
-# 💬 Mensajes de usuario
-# ================================
 class Mensaje(BaseModel):
-    usuario: str             # quien envía
-    tipo: str                # "pregunta" o "sugerencia"
-    mensaje: str             # contenido
-    origen: str = "usuario"  # "usuario" o "admin"
-    destinatario: str = None # opcional: para admin, a quién responde
-
-# Lista temporal para mensajes
-mensajes: list[dict] = []
-
-# =============================
-# 🗑️ Limpieza automática de mensajes antiguos
-# =============================
-def limpiar_mensajes_antiguos():
-    """Elimina mensajes con más de 30 días de antigüedad"""
-    global mensajes
-    fecha_limite = datetime.now() - timedelta(days=30)
-    cantidad_inicial = len(mensajes)
-    
-    mensajes = [
-        m for m in mensajes 
-        if m.get("fecha") and m["fecha"] > fecha_limite
-    ]
-    
-    cantidad_eliminada = cantidad_inicial - len(mensajes)
-    if cantidad_eliminada > 0:
-        print(f"🗑️ Eliminados {cantidad_eliminada} mensajes antiguos (>30 días)")
-    
-    return cantidad_eliminada
-
-async def tarea_limpieza_periodica():
-    """Ejecuta la limpieza cada 24 horas"""
-    while True:
-        await asyncio.sleep(86400)  # 24 horas en segundos
-        limpiar_mensajes_antiguos()
+    usuario: str
+    tipo: str
+    mensaje: str
+    origen: str = "usuario"
+    destinatario: str = None
 
 @app.post("/api/mensajes/enviar")
 async def enviar_mensaje(data: Mensaje):
-    origen = getattr(data, "origen", None) or "usuario"
-    destinatario = getattr(data, "destinatario", None)
+    origen = data.origen or "usuario"
+    destinatario = data.destinatario
     if origen == "usuario" and not destinatario:
         destinatario = "admin"
 
@@ -367,29 +420,20 @@ async def enviar_mensaje(data: Mensaje):
 
 @app.get("/api/mensajes/recibir")
 async def recibir_mensajes(usuario: str = None, tipo: str = None):
-    """
-    Devuelve los mensajes filtrados por tipo.
-    Si no hay usuario, devuelve TODOS los mensajes del tipo especificado.
-    """
+    """Devuelve mensajes filtrados"""
     print(f"🔍 Recibiendo mensajes - Usuario: {usuario}, Tipo: {tipo}")
-    print(f"📊 Total mensajes en memoria: {len(mensajes)}")
     
     filtrados = mensajes.copy()
     
-    # Si hay tipo, filtrar por tipo
     if tipo:
         filtrados = [m for m in filtrados if m.get("tipo") == tipo]
-        print(f"📋 Después de filtrar por tipo '{tipo}': {len(filtrados)} mensajes")
     
-    # Si hay usuario, filtrar por participación del usuario
     if usuario:
         filtrados = [
             m for m in filtrados
             if m.get("usuario") == usuario or m.get("destinatario") == usuario or m.get("origen") == usuario
         ]
-        print(f"👤 Después de filtrar por usuario '{usuario}': {len(filtrados)} mensajes")
     
-    # Convertir datetime a string para JSON
     resultado = []
     for m in filtrados:
         msg_dict = m.copy()
@@ -397,29 +441,7 @@ async def recibir_mensajes(usuario: str = None, tipo: str = None):
             msg_dict["fecha"] = msg_dict["fecha"].isoformat()
         resultado.append(msg_dict)
     
-    print(f"✅ Devolviendo {len(resultado)} mensajes")
     return resultado
-
-# =============================
-# 🔄 Configuración de BD
-# =============================
-class ConexionRequest(BaseModel):
-    Cadena: str = Field(..., alias="cadena")
-    class Config:
-        populate_by_name = True
-
-@app.post("/configuracion/cambiarBD")
-async def cambiar_bd(data: ConexionRequest):
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        f.write(data.Cadena.strip())
-    return {"mensaje": "Cadena de conexión guardada correctamente"}
-
-@app.get("/configuracion/rutaActual")
-async def ruta_actual():
-    if not os.path.exists(CONFIG_PATH):
-        return JSONResponse({"error": "No hay conexión configurada"}, status_code=404)
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return {"cadena": f.read().strip()}
 
 @app.get("/api/mensajes/contadores")
 async def contadores(usuario: str):
@@ -438,21 +460,12 @@ async def contadores(usuario: str):
 
 @app.post("/api/mensajes/marcar-leido")
 async def marcar_leido(data: dict = Body(...)):
-    """
-    Marca como leídos los mensajes enviados al usuario.
-    Espera un JSON con:
-    {
-        "usuario": "correo@ejemplo.com",
-        "ids": [opcional]  // si no hay IDs, marca todos los mensajes no leídos del usuario
-    }
-    """
     usuario = data.get("usuario")
     ids = data.get("ids", [])
 
     if not usuario:
         return {"ok": False, "error": "Falta el campo 'usuario'"}
 
-    # Marcar los mensajes
     marcados = 0
     for m in mensajes:
         if (
@@ -465,22 +478,17 @@ async def marcar_leido(data: dict = Body(...)):
 
     return {"ok": True, "marcados": marcados}
 
-# =============================
-# 🛠️ Endpoint manual de limpieza (opcional)
-# =============================
 @app.post("/api/mensajes/limpiar-antiguos")
 async def limpiar_antiguos_manual():
-    """Endpoint para ejecutar manualmente la limpieza de mensajes antiguos"""
     cantidad = limpiar_mensajes_antiguos()
     return {
         "ok": True,
-        "mensaje": f"Se eliminaron {cantidad} mensajes con más de 30 días de antigüedad",
+        "mensaje": f"Se eliminaron {cantidad} mensajes con más de 30 días",
         "eliminados": cantidad
     }
 
 @app.get("/api/mensajes/estadisticas")
 async def estadisticas_mensajes():
-    """Muestra estadísticas de los mensajes"""
     ahora = datetime.now()
     antiguos = sum(1 for m in mensajes if (ahora - m.get("fecha", ahora)).days > 30)
     
@@ -490,9 +498,32 @@ async def estadisticas_mensajes():
         "activos": len(mensajes) - antiguos
     }
 
-# ================================
-# 📍 Gestión de Direcciones
-# ================================
+# =============================
+# 🔄 CONFIGURACIÓN DE BD
+# =============================
+
+class ConexionRequest(BaseModel):
+    Cadena: str = Field(..., alias="cadena")
+    class Config:
+        populate_by_name = True
+
+@app.post("/configuracion/cambiarBD")
+async def cambiar_bd(data: ConexionRequest):
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        f.write(data.Cadena.strip())
+    return {"mensaje": "Cadena de conexión guardada correctamente"}
+
+@app.get("/configuracion/rutaActual")
+async def ruta_actual():
+    if not os.path.exists(CONFIG_PATH):
+        return JSONResponse({"error": "No hay conexión configurada"}, status_code=404)
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        return {"cadena": f.read().strip()}
+
+# =============================
+# 📍 DIRECCIONES
+# =============================
+
 class Direccion(BaseModel):
     calle: str
     numero: str
@@ -501,338 +532,125 @@ class Direccion(BaseModel):
     estado: str
     cp: str
 
-# Lista temporal para direcciones (similar a mensajes)
-direcciones: list[dict] = []
-
-# ================================
-# 📞 Gestión de Teléfonos
-# ================================
-class Telefono(BaseModel):
-    numero: str
-    descripcion: str = ""
-
-class MensajeRequest(BaseModel):
-    usuario: str
-    tipo: str
-    mensaje: str
-    origen: str = "usuario"
-    destinatario: str = None
-
-# Lista temporal para teléfonos
-telefonos: list[dict] = []
-
-PRODUCTOS_FILE = os.path.join(os.path.dirname(__file__), "productos.json")
-DIRECCIONES_FILE = os.path.join(os.path.dirname(__file__), "direcciones.json")
-TELEFONOS_FILE = os.path.join(os.path.dirname(__file__), "telefonos.json")
-# Al inicio del archivo, junto con las otras listas
-DIRECCIONES_FILE = os.path.join(os.path.dirname(__file__), "direcciones.json")
-TELEFONOS_FILE = os.path.join(os.path.dirname(__file__), "telefonos.json")
-
-# Cargar datos al inicio
-def cargar_datos():
-    global direcciones, telefonos
-
-    # Cargar direcciones
-    if os.path.exists(DIRECCIONES_FILE):
-        try:
-            with open(DIRECCIONES_FILE, "r", encoding="utf-8") as f:
-                direcciones = json.load(f)
-            print(f"📍 Cargadas {len(direcciones)} direcciones")
-        except Exception as e:
-            direcciones = []
-            print(f"⚠️ Error al cargar direcciones.json: {e}")
-    else:
-        direcciones = []
-
-    # Cargar teléfonos
-    if os.path.exists(TELEFONOS_FILE):
-        try:
-            with open(TELEFONOS_FILE, "r", encoding="utf-8") as f:
-                telefonos = json.load(f)
-            print(f"📞 Cargados {len(telefonos)} teléfonos")
-        except Exception as e:
-            telefonos = []
-            print(f"⚠️ Error al cargar telefonos.json: {e}")
-    else:
-        telefonos = []
-
-# Guardar datos
-def guardar_direcciones():
-    with open(DIRECCIONES_FILE, "w", encoding="utf-8") as f:
-        json.dump(direcciones, f, indent=2, ensure_ascii=False, default=str)
-
-def guardar_telefonos():
-    with open(TELEFONOS_FILE, "w", encoding="utf-8") as f:
-        json.dump(telefonos, f, indent=2, ensure_ascii=False, default=str)
-
-# =============================
-# ENDPOINTS DE DIRECCIONES
-# =============================
 @app.get("/direcciones")
 async def obtener_direcciones():
-    """Obtiene todas las direcciones (desde archivo persistente)"""
     try:
         dirs = contactos.obtener_direcciones()
         print(f"📍 GET /direcciones - Devolviendo {len(dirs)} direcciones")
-        return JSONResponse(
-            content=dirs,
-            media_type="application/json; charset=utf-8"
-        )
+        return JSONResponse(content=dirs, media_type="application/json; charset=utf-8")
     except Exception as e:
-        print(f"❌ Error en GET /direcciones: {e}")
-        return JSONResponse(
-            {"error": str(e)},
-            status_code=500
-        )
+        print(f"❌ Error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/direcciones/{id}")
 async def obtener_direccion(id: str):
-    """Obtiene una dirección específica por ID"""
     try:
         dirs = contactos.obtener_direcciones()
         direccion = next((d for d in dirs if d.get("id") == id), None)
-        
         if not direccion:
-            return JSONResponse(
-                {"error": "Dirección no encontrada"},
-                status_code=404
-            )
-        
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
         return JSONResponse(content=direccion)
     except Exception as e:
-        print(f"❌ Error en GET /direcciones/{id}: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/direcciones")
 async def agregar_direccion(data: Direccion):
-    """Agrega una nueva dirección y la PERSISTE"""
     try:
-        print(f"\n📍 POST /direcciones")
-        print(f"   Calle: {data.calle}")
-        print(f"   Número: {data.numero}")
-        
         nueva_dir = contactos.agregar_direccion(
-            calle=data.calle,
-            numero=data.numero,
-            colonia=data.colonia,
-            ciudad=data.ciudad,
-            estado=data.estado,
-            cp=data.cp
+            calle=data.calle, numero=data.numero, colonia=data.colonia,
+            ciudad=data.ciudad, estado=data.estado, cp=data.cp
         )
-        
-        return JSONResponse(
-            content={
-                "ok": True,
-                "mensaje": "Dirección agregada correctamente",
-                "direccion": nueva_dir
-            },
-            status_code=201
-        )
+        return JSONResponse(content={"ok": True, "direccion": nueva_dir}, status_code=201)
     except Exception as e:
-        print(f"❌ Error en POST /direcciones: {e}")
-        return JSONResponse(
-            {"ok": False, "error": str(e)},
-            status_code=500
-        )
-
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.put("/direcciones/{id}")
 async def actualizar_direccion(id: str, data: Direccion):
-    """Actualiza una dirección existente y la PERSISTE"""
     try:
-        print(f"\n📍 PUT /direcciones/{id}")
-        print(f"   Nueva calle: {data.calle}")
-        
         direccion = contactos.actualizar_direccion(
-            id_dir=id,
-            calle=data.calle,
-            numero=data.numero,
-            colonia=data.colonia,
-            ciudad=data.ciudad,
-            estado=data.estado,
-            cp=data.cp
+            id_dir=id, calle=data.calle, numero=data.numero, colonia=data.colonia,
+            ciudad=data.ciudad, estado=data.estado, cp=data.cp
         )
-        
         if not direccion:
-            return JSONResponse(
-                {"error": "Dirección no encontrada"},
-                status_code=404
-            )
-        
-        return JSONResponse(
-            content={
-                "ok": True,
-                "mensaje": "Dirección actualizada correctamente",
-                "direccion": direccion
-            }
-        )
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
+        return JSONResponse(content={"ok": True, "direccion": direccion})
     except Exception as e:
-        print(f"❌ Error en PUT /direcciones/{id}: {e}")
-        return JSONResponse(
-            {"ok": False, "error": str(e)},
-            status_code=500
-        )
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.delete("/direcciones/{id}")
 async def eliminar_direccion(id: str):
-    """Elimina una dirección y PERSISTE el cambio"""
     try:
-        print(f"\n📍 DELETE /direcciones/{id}")
-        
-        # Verificar que existe
         dirs = contactos.obtener_direcciones()
         if not any(d.get("id") == id for d in dirs):
-            return JSONResponse(
-                {"error": "Dirección no encontrada"},
-                status_code=404
-            )
-        
+            return JSONResponse({"error": "No encontrada"}, status_code=404)
         contactos.eliminar_direccion(id)
-        
-        return JSONResponse(
-            content={
-                "ok": True,
-                "mensaje": "Dirección eliminada correctamente"
-            }
-        )
+        return JSONResponse(content={"ok": True, "mensaje": "Eliminada"})
     except Exception as e:
-        print(f"❌ Error en DELETE /direcciones/{id}: {e}")
-        return JSONResponse(
-            {"ok": False, "error": str(e)},
-            status_code=500
-        )
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 # =============================
-# ENDPOINTS DE TELÉFONOS
+# 📞 TELÉFONOS
 # =============================
+
+class Telefono(BaseModel):
+    numero: str
+    descripcion: str = ""
+
 @app.get("/telefonos")
 async def obtener_telefonos():
-    """Obtiene todos los teléfonos (desde archivo persistente)"""
     try:
         tels = contactos.obtener_telefonos()
         print(f"📞 GET /telefonos - Devolviendo {len(tels)} teléfonos")
-        return JSONResponse(
-            content=tels,
-            media_type="application/json; charset=utf-8"
-        )
+        return JSONResponse(content=tels, media_type="application/json; charset=utf-8")
     except Exception as e:
-        print(f"❌ Error en GET /telefonos: {e}")
-        return JSONResponse(
-            {"error": str(e)},
-            status_code=500
-        )
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/telefonos/{id}")
 async def obtener_telefono(id: str):
-    """Obtiene un teléfono específico por ID"""
     try:
         tels = contactos.obtener_telefonos()
         telefono = next((t for t in tels if t.get("id") == id), None)
-        
         if not telefono:
-            return JSONResponse(
-                {"error": "Teléfono no encontrado"},
-                status_code=404
-            )
-        
+            return JSONResponse({"error": "No encontrado"}, status_code=404)
         return JSONResponse(content=telefono)
     except Exception as e:
-        print(f"❌ Error en GET /telefonos/{id}: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/telefonos")
 async def agregar_telefono(data: Telefono):
-    """Agrega un nuevo teléfono y lo PERSISTE"""
     try:
-        print(f"\n📞 POST /telefonos")
-        print(f"   Número: {data.numero}")
-        print(f"   Descripción: {data.descripcion}")
-        
-        nuevo_tel = contactos.agregar_telefono(
-            numero=data.numero,
-            descripcion=data.descripcion
-        )
-        
-        return JSONResponse(
-            content={
-                "ok": True,
-                "mensaje": "Teléfono agregado correctamente",
-                "telefono": nuevo_tel
-            },
-            status_code=201
-        )
+        nuevo_tel = contactos.agregar_telefono(numero=data.numero, descripcion=data.descripcion)
+        return JSONResponse(content={"ok": True, "telefono": nuevo_tel}, status_code=201)
     except Exception as e:
-        print(f"❌ Error en POST /telefonos: {e}")
-        return JSONResponse(
-            {"ok": False, "error": str(e)},
-            status_code=500
-        )
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.put("/telefonos/{id}")
 async def actualizar_telefono(id: str, data: Telefono):
-    """Actualiza un teléfono existente y lo PERSISTE"""
     try:
-        print(f"\n📞 PUT /telefonos/{id}")
-        print(f"   Nuevo número: {data.numero}")
-        
-        telefono = contactos.actualizar_telefono(
-            id_tel=id,
-            numero=data.numero,
-            descripcion=data.descripcion
-        )
-        
+        telefono = contactos.actualizar_telefono(id_tel=id, numero=data.numero, descripcion=data.descripcion)
         if not telefono:
-            return JSONResponse(
-                {"error": "Teléfono no encontrado"},
-                status_code=404
-            )
-        
-        return JSONResponse(
-            content={
-                "ok": True,
-                "mensaje": "Teléfono actualizado correctamente",
-                "telefono": telefono
-            }
-        )
+            return JSONResponse({"error": "No encontrado"}, status_code=404)
+        return JSONResponse(content={"ok": True, "telefono": telefono})
     except Exception as e:
-        print(f"❌ Error en PUT /telefonos/{id}: {e}")
-        return JSONResponse(
-            {"ok": False, "error": str(e)},
-            status_code=500
-        )
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.delete("/telefonos/{id}")
 async def eliminar_telefono(id: str):
-    """Elimina un teléfono y PERSISTE el cambio"""
     try:
-        print(f"\n📞 DELETE /telefonos/{id}")
-        
-        # Verificar que existe
         tels = contactos.obtener_telefonos()
         if not any(t.get("id") == id for t in tels):
-            return JSONResponse(
-                {"error": "Teléfono no encontrado"},
-                status_code=404
-            )
-        
+            return JSONResponse({"error": "No encontrado"}, status_code=404)
         contactos.eliminar_telefono(id)
-        
-        return JSONResponse(
-            content={
-                "ok": True,
-                "mensaje": "Teléfono eliminado correctamente"
-            }
-        )
+        return JSONResponse(content={"ok": True, "mensaje": "Eliminado"})
     except Exception as e:
-        print(f"❌ Error en DELETE /telefonos/{id}: {e}")
-        return JSONResponse(
-            {"ok": False, "error": str(e)},
-            status_code=500
-        )
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# =============================
+# 🔍 DEBUG
+# =============================
 
 @app.get("/debug/contactos-estado")
 async def debug_contactos_estado():
-    """Muestra el estado actual de direcciones y teléfonos"""
     try:
         dirs_mem = contactos.obtener_direcciones()
         tels_mem = contactos.obtener_telefonos()
@@ -852,41 +670,13 @@ async def debug_contactos_estado():
             "direcciones": {
                 "memoria": len(dirs_mem),
                 "archivo": len(dirs_arch),
-                "sincronizado": len(dirs_mem) == len(dirs_arch),
-                "primero": dirs_mem[0] if dirs_mem else None
+                "sincronizado": len(dirs_mem) == len(dirs_arch)
             },
             "telefonos": {
                 "memoria": len(tels_mem),
                 "archivo": len(tels_arch),
-                "sincronizado": len(tels_mem) == len(tels_arch),
-                "primero": tels_mem[0] if tels_mem else None
+                "sincronizado": len(tels_mem) == len(tels_arch)
             }
         }
     except Exception as e:
         return {"error": str(e)}
-
-# =============================
-# 🚀 Evento de inicio (ACTUALIZADO)
-# =============================
-@app.on_event("startup")
-async def startup_event():
-    print("\n🚀 Ferre-Calvillito API iniciada correctamente")
-    print(f"📁 Ruta base: {os.path.dirname(__file__)}")
-    
-    # ✅ Inicializar GitHub persistence
-    data_dir = os.path.join(os.path.dirname(__file__), "data")
-    os.makedirs(data_dir, exist_ok=True)
-    gh.inicializar_github(data_dir)
-    
-    # ✅ Cargar TODO desde GitHub (con fallback local)
-    global productos_api
-    productos_api = gh.cargar_productos_github()
-    
-    contactos.cargar_direcciones()
-    contactos.cargar_telefonos()
-    
-    limpiar_mensajes_antiguos()
-    asyncio.create_task(tarea_limpieza_periodica())
-    
-    print(f"✅ Cargados {len(productos_api)} productos desde GitHub")
-    print("✅ API lista\n")
