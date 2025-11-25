@@ -560,6 +560,10 @@ async def agregar_direccion(data: Direccion):
             calle=data.calle, numero=data.numero, colonia=data.colonia,
             ciudad=data.ciudad, estado=data.estado, cp=data.cp
         )
+        # 🔄 Guardar en GitHub
+        dirs = contactos.obtener_direcciones()
+        gh.guardar_direcciones_github(dirs)
+        
         return JSONResponse(content={"ok": True, "direccion": nueva_dir}, status_code=201)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
@@ -573,6 +577,11 @@ async def actualizar_direccion(id: str, data: Direccion):
         )
         if not direccion:
             return JSONResponse({"error": "No encontrada"}, status_code=404)
+        
+        # 🔄 Guardar en GitHub
+        dirs = contactos.obtener_direcciones()
+        gh.guardar_direcciones_github(dirs)
+        
         return JSONResponse(content={"ok": True, "direccion": direccion})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
@@ -584,6 +593,11 @@ async def eliminar_direccion(id: str):
         if not any(d.get("id") == id for d in dirs):
             return JSONResponse({"error": "No encontrada"}, status_code=404)
         contactos.eliminar_direccion(id)
+        
+        # 🔄 Guardar en GitHub
+        dirs_actualizado = contactos.obtener_direcciones()
+        gh.guardar_direcciones_github(dirs_actualizado)
+        
         return JSONResponse(content={"ok": True, "mensaje": "Eliminada"})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
@@ -620,6 +634,12 @@ async def obtener_telefono(id: str):
 async def agregar_telefono(data: Telefono):
     try:
         nuevo_tel = contactos.agregar_telefono(numero=data.numero, descripcion=data.descripcion)
+        
+        # 🔄 GUARDAR EN GITHUB
+        tels = contactos.obtener_telefonos()
+        gh.guardar_telefonos_github(tels)
+        print(f"✅ Teléfono guardado en GitHub")
+        
         return JSONResponse(content={"ok": True, "telefono": nuevo_tel}, status_code=201)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
@@ -630,6 +650,12 @@ async def actualizar_telefono(id: str, data: Telefono):
         telefono = contactos.actualizar_telefono(id_tel=id, numero=data.numero, descripcion=data.descripcion)
         if not telefono:
             return JSONResponse({"error": "No encontrado"}, status_code=404)
+        
+        # 🔄 GUARDAR EN GITHUB
+        tels = contactos.obtener_telefonos()
+        gh.guardar_telefonos_github(tels)
+        print(f"✅ Teléfono actualizado en GitHub")
+        
         return JSONResponse(content={"ok": True, "telefono": telefono})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
@@ -641,6 +667,12 @@ async def eliminar_telefono(id: str):
         if not any(t.get("id") == id for t in tels):
             return JSONResponse({"error": "No encontrado"}, status_code=404)
         contactos.eliminar_telefono(id)
+        
+        # 🔄 GUARDAR EN GITHUB
+        tels_actualizado = contactos.obtener_telefonos()
+        gh.guardar_telefonos_github(tels_actualizado)
+        print(f"✅ Teléfono eliminado de GitHub")
+        
         return JSONResponse(content={"ok": True, "mensaje": "Eliminado"})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
