@@ -22,6 +22,8 @@ data_dir = None
 PRODUCTOS_LOCAL_FILE = None
 DIRECCIONES_LOCAL_FILE = None
 TELEFONOS_LOCAL_FILE = None
+IMAGENES_LOCAL_DIR = None
+IMAGENES_GITHUB_DIR = "imagenes"  # Carpeta en GitHub
 
 # =============================
 # 🔧 Inicialización
@@ -29,12 +31,13 @@ TELEFONOS_LOCAL_FILE = None
 
 def inicializar_github(directorio_datos):
     """Inicializa las variables globales de GitHub"""
-    global data_dir, PRODUCTOS_LOCAL_FILE, DIRECCIONES_LOCAL_FILE, TELEFONOS_LOCAL_FILE
+    global data_dir, PRODUCTOS_LOCAL_FILE, DIRECCIONES_LOCAL_FILE, TELEFONOS_LOCAL_FILE, IMAGENES_LOCAL_DIR
     
     data_dir = directorio_datos
     PRODUCTOS_LOCAL_FILE = os.path.join(data_dir, "productos_github.json")
     DIRECCIONES_LOCAL_FILE = os.path.join(data_dir, "direcciones_github.json")
     TELEFONOS_LOCAL_FILE = os.path.join(data_dir, "telefonos_github.json")
+    IMAGENES_LOCAL_DIR = os.path.join(data_dir, "imagenes")
     
     print(f"\n{'='*70}")
     print(f"🔐 INICIALIZANDO GITHUB PERSISTENCE")
@@ -44,6 +47,7 @@ def inicializar_github(directorio_datos):
     print(f"   Productos: {PRODUCTOS_LOCAL_FILE}")
     print(f"   Direcciones: {DIRECCIONES_LOCAL_FILE}")
     print(f"   Teléfonos: {TELEFONOS_LOCAL_FILE}")
+    print(f"   Imágenes: {IMAGENES_LOCAL_DIR}")
     print(f"{'='*70}\n")
     
     if not GITHUB_TOKEN:
@@ -204,6 +208,103 @@ def _guardar_en_github(datos, nombre_archivo, archivo_local):
 
 
 # =============================
+# 🖼️ GUARDAR IMÁGENES EN GITHUB
+# =============================
+
+def guardar_imagen_github(codigo_producto, ruta_imagen_local):
+    """
+    Guarda una imagen de producto en GitHub
+    
+    Args:
+        codigo_producto: Código del producto (ej: "001")
+        ruta_imagen_local: Ruta local de la imagen (ej: "data/imagenes/001.jpg")
+    
+    Returns:
+        True si se guardó exitosamente, False en caso contrario
+    """
+    
+    if not os.path.exists(ruta_imagen_local):
+        print(f"⚠️ Imagen no encontrada: {ruta_imagen_local}")
+        return False
+    
+    if not GITHUB_TOKEN or not GITHUB_OWNER or not GITHUB_REPO:
+        print(f"⚠️ Sin credenciales de GitHub - imagen no guardada en repositorio")
+        return False
+    
+    try:
+        print(f"\n📤 Subiendo imagen: {codigo_producto}.jpg a GitHub...")
+        
+        # Leer imagen
+        with open(ruta_imagen_local, "rb") as f:
+            contenido_img = f.read()
+        
+        # Convertir a base64
+        contenido_b64 = base64.b64encode(contenido_img).decode()
+        
+        # Ruta en GitHub
+        nombre_archivo = f"{IMAGENES_GITHUB_DIR}/{codigo_producto}.jpg"
+        url = f"{GITHUB_API_URL}/{nombre_archivo}"
+        
+        # Obtener SHA si ya existe
+        sha = _obtener_sha_archivo(nombre_archivo)
+        
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        payload = {
+            "message": f"🖼️ Imagen producto {codigo_producto} - {datetime.now().isoformat()}",
+            "content": contenido_b64,
+            "branch": "main"
+        }
+        
+        if sha:
+            payload["sha"] = sha
+        
+        response = requests.put(url, headers=headers, json=payload, timeout=15)
+        
+        if response.status_code in [200, 201]:
+            print(f"✅ Imagen guardada en GitHub")
+            return True
+        else:
+            print(f"⚠️ Error GitHub al guardar imagen ({response.status_code})")
+            return False
+    
+    except Exception as e:
+        print(f"❌ Error guardando imagen: {e}")
+        return False
+
+
+def guardar_lote_imagenes_github(imagenes_dict):
+    """
+    Guarda múltiples imágenes en GitHub
+    
+    Args:
+        imagenes_dict: Dict con {codigo_producto: ruta_local}
+    
+    Returns:
+        Dict con resultados {codigo_producto: True/False}
+    """
+    print(f"\n{'='*70}")
+    print(f"🖼️ GUARDANDO LOTE DE IMÁGENES EN GITHUB")
+    print(f"   Total: {len(imagenes_dict)}")
+    print(f"{'='*70}")
+    
+    resultados = {}
+    
+    for codigo, ruta in imagenes_dict.items():
+        resultado = guardar_imagen_github(codigo, ruta)
+        resultados[codigo] = resultado
+    
+    exitosas = sum(1 for v in resultados.values() if v)
+    print(f"\n✅ {exitosas}/{len(imagenes_dict)} imágenes guardadas")
+    print(f"{'='*70}\n")
+    
+    return resultados
+
+
+# =============================
 # 🔧 FUNCIONES AUXILIARES
 # =============================
 
@@ -253,7 +354,8 @@ def debug_estado_github():
         "repo": GITHUB_REPO,
         "productos_local": os.path.exists(PRODUCTOS_LOCAL_FILE) if PRODUCTOS_LOCAL_FILE else False,
         "direcciones_local": os.path.exists(DIRECCIONES_LOCAL_FILE) if DIRECCIONES_LOCAL_FILE else False,
-        "telefonos_local": os.path.exists(TELEFONOS_LOCAL_FILE) if TELEFONOS_LOCAL_FILE else False
+        "telefonos_local": os.path.exists(TELEFONOS_LOCAL_FILE) if TELEFONOS_LOCAL_FILE else False,
+        "imagenes_local": os.path.exists(IMAGENES_LOCAL_DIR) if IMAGENES_LOCAL_DIR else False
     }
 
 
