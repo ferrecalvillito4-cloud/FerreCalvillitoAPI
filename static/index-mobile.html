@@ -161,6 +161,29 @@
             transition: all 0.3s ease;
         }
         
+        .producto-imagen {
+            width: 100%;
+            height: 120px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .producto-imagen-placeholder {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 40px;
+        }
+        
         .producto-card:active {
             transform: scale(0.98);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -799,13 +822,26 @@
             productosFiltrados.slice(inicio, fin).forEach(p => {
                 const card = document.createElement("div");
                 card.className = "producto-card";
+
+                // ✅ OBTENER URL DE IMAGEN
+                const tieneImagen = p.imagen && p.imagen.existe && p.imagen.url_github;
+                const imagenHTML = tieneImagen ?
+                    `<img src="${p.imagen.url_github}" alt="${p.Nombre}" class="producto-imagen" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+                    '';
+
+                const placeholderHTML = !tieneImagen || true ?
+                    `<div class="producto-imagen-placeholder" style="${tieneImagen ? 'display:none;' : ''}">📦</div>` :
+                    '';
+
                 card.innerHTML = `
-                <div class="codigo">Código: ${p.Codigo}</div>
-                <div class="nombre">📦 ${p.Nombre}</div>
-                <div class="precio">💰 $${Number(p.Precio).toFixed(2)}</div>
-                <div class="stock">📊 Stock: ${p.Existencia}</div>
-                <button class="btn-agregar" data-codigo="${p.Codigo}">➕ Agregar</button>
-                `;
+        ${imagenHTML}
+        ${placeholderHTML}
+        <div class="codigo">Código: ${p.Codigo}</div>
+        <div class="nombre">📦 ${p.Nombre}</div>
+        <div class="precio">💰 $${Number(p.Precio).toFixed(2)}</div>
+        <div class="stock">📊 Stock: ${p.Existencia}</div>
+        <button class="btn-agregar" data-codigo="${p.Codigo}">➕ Agregar</button>
+        `;
                 contenedor.appendChild(card);
             });
         }

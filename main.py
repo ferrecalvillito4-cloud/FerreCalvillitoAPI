@@ -19,6 +19,8 @@ from pydantic import BaseModel, Field
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 import fdb
+import asyncio
+from gestor_imagenes import GestorImagenesProductos
 
 # =============================
 # 🚀 Inicialización principal
@@ -70,6 +72,15 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET", "clave_super_secreta_123")
 )
+
+# =============================
+# 🖼️ CONFIGURACIÓN DE IMÁGENES
+# =============================
+IMAGENES_DIR = os.path.join(SCRIPT_DIR, "imagenes_productos")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPO = os.getenv("GITHUB_REPO")  # formato: usuario/repo
+
+gestor_imagenes = None
 
 # =============================
 # 🔐 Configuración OAuth con Google
@@ -150,7 +161,7 @@ async def tarea_limpieza_periodica():
 @app.on_event("startup")
 async def startup_event():
     """✅ STARTUP COMPLETAMENTE FUNCIONAL"""
-    global productos_api, direcciones, telefonos, mensajes
+    global productos_api, direcciones, telefonos, mensajes, gestor_imagenes
     
     print("\n" + "="*80)
     print("🚀 INICIANDO FERRE-CALVILLITO API")
@@ -162,6 +173,21 @@ async def startup_event():
         gh.inicializar_github(DATA_DIR)
         print("   ✅ GitHub Persistence inicializado")
         
+        # 1.5️⃣ Inicializar Gestor de Imágenes
+        print("\n🖼️ PASO 1.5: Inicializando Gestor de Imágenes...")
+        try:
+            gestor_imagenes = GestorImagenesProductos(
+                directorio_imagenes=IMAGENES_DIR,
+                github_token=GITHUB_TOKEN,
+                github_repo=GITHUB_REPO
+            )
+            print(f"   ✅ Gestor de Imágenes inicializado")
+            print(f"   📁 Directorio: {IMAGENES_DIR}")
+            print(f"   🔐 GitHub: {GITHUB_REPO or 'No configurado'}")
+        except Exception as e:
+            print(f"   ⚠️ Error inicializando imágenes: {e}")
+            gestor_imagenes = None
+        
         # 2️⃣ Inicializar módulo de productos
         print("\n📊 PASO 2: Inicializando módulo de productos...")
         try:
@@ -169,7 +195,8 @@ async def startup_event():
             print(f"   ✅ Módulo de productos inicializado")
         except Exception as e:
             print(f"   ⚠️ Error: {e}")
-        # 2️⃣B Cargar productos desde GitHub
+        
+        # 2B️⃣ Cargar productos desde GitHub
         print("\n📊 PASO 2B: Cargando productos...")
         try:
             productos_api = gh.cargar_productos_github()
@@ -213,6 +240,7 @@ async def startup_event():
         print("✅ API LISTA PARA USAR")
         print("="*80)
         print(f"📊 Productos: {len(productos_api)}")
+        print(f"🖼️ Imágenes descargadas: {len([p for p in productos_api if p.get('imagen', {}).get('url_github')])}")
         print(f"📍 Direcciones: {len(direcciones)}")
         print(f"📞 Teléfonos: {len(telefonos)}")
         print(f"💬 Mensajes: {len(mensajes)}")
@@ -276,46 +304,189 @@ async def index_desktop():
 
 @app.get("/producto")
 async def obtener_productos():
-    """Devuelve todos los productos"""
+    """Devuelve todos los productos CON IMÁGENES desde GitHub"""
     productos = gh.cargar_productos_github()
-    print(f"🔍 GET /producto - Devolviendo {len(productos)} productos")
+    
+    # Asegurar que cada producto tenga estructura de imagen
+    for prod in productos:
+        if not prod.get('imagen'):
+            prod['imagen'] = {
+                'existe': False,
+                'url_github': None
+            }
+    
+    cant_con_imagen = len([p for p in productos if p.get('imagen', {}).get('existe')])
+    print(f"🔍 GET /producto")
+    print(f"   Total: {len(productos)}")
+    print(f"   Con imagen: {cant_con_imagen}")
+    
     return JSONResponse(
         content=productos,
         media_type="application/json; charset=utf-8"
     )
 
+@app.get("/api/productos/{codigo}/imagen")
+async def obtener_imagen_producto(codigo: str):
+    """Obtiene la URL de imagen de un producto específico"""
+    producto = next(
+        (p for p in productos_api if p.get('Codigo') == codigo),
+        None
+    )
+    
+    if not producto:
+        return JSONResponse({"error": "Producto no encontrado"}, status_code=404)
+    
+    imagen = producto.get('imagen', {})
+    
+    return JSONResponse({
+        "codigo": codigo,
+        "nombre": producto.get('Nombre'),
+        "descripcion": producto.get('Descripcion'),
+        "existe": imagen.get('existe', False),
+        "url_github": imagen.get('url_github'),
+        "fuente": imagen.get('fuente', 'sin_descripcion')
+    })
+
+@app.post("/api/productos/procesar-imagenes-manual")
+async def procesar_imagenes_manual():
+    """Procesa imágenes manualmente de todos los productos con descripción"""
+    
+    if not gestor_imagenes:
+        return {"ok": False, "error": "Gestor de imágenes no inicializado"}
+    
+    # Filtrar productos con descripción
+    productos_con_desc = [
+        p for p in productos_api 
+        if p.get('Descripcion') and p['Descripcion'].strip()
+    ]
+    
+    if not productos_con_desc:
+        return {"ok": False, "error": "No hay productos con descripción"}
+    
+    # Procesar en background
+    asyncio.create_task(procesar_imagenes_background(productos_con_desc))
+    
+    return {
+        "ok": True,
+        "mensaje": f"Procesando {len(productos_con_desc)} imágenes",
+        "procesando": len(productos_con_desc)
+    }
+
 @app.post("/api/productos/admin-upload")
 async def admin_upload_productos(data: list[dict]):
-    """Admin upload de productos"""
+    """Admin upload de productos + PROCESAR IMÁGENES AUTOMÁTICAMENTE"""
     global productos_api
     
     print(f"\n{'='*60}")
-    print(f"📤 ADMIN UPLOAD")
+    print(f"📤 ADMIN UPLOAD - PRODUCTOS + IMÁGENES")
     print(f"   Cantidad: {len(data)}")
     
     if not data:
         return {"ok": False, "error": "Lista vacía"}
     
     try:
-        # Actualizar memoria
+        # 1️⃣ Actualizar memoria
         productos_api = data
         
-        # Guardar en GitHub
+        # 2️⃣ Guardar en GitHub
         gh.guardar_productos_github(data)
         
-        print(f"✅ Actualización completada")
+        # 3️⃣ PROCESAR IMÁGENES AUTOMÁTICAMENTE
+        print(f"\n🖼️ Iniciando procesamiento de imágenes...")
+        
+        if gestor_imagenes:
+            # Filtrar productos CON descripción (solo estos buscan imagen)
+            productos_con_desc = [
+                p for p in data 
+                if p.get('Descripcion') and p['Descripcion'].strip()
+            ]
+            
+            print(f"   📦 Productos con descripción: {len(productos_con_desc)}")
+            
+            if productos_con_desc:
+                try:
+                    # Procesar en segundo plano
+                    asyncio.create_task(
+                        procesar_imagenes_background(productos_con_desc)
+                    )
+                    print(f"   ⏳ Procesando imágenes en segundo plano...")
+                except Exception as e:
+                    print(f"   ⚠️ Error inicializando procesamiento: {e}")
+        
+        print(f"✅ Productos guardados en GitHub")
         print(f"{'='*60}\n")
         
         return {
             "ok": True,
-            "mensaje": f"✅ {len(data)} productos guardados y sincronizados",
+            "mensaje": f"✅ {len(data)} productos guardados",
             "guardados": len(data),
+            "con_descripcion": len([p for p in data if p.get('Descripcion')]),
+            "procesando_imagenes": True,
             "timestamp": datetime.now().isoformat()
         }
     
     except Exception as e:
         print(f"❌ Error: {e}\n")
         return {"ok": False, "error": str(e)}
+    
+async def procesar_imagenes_background(productos_con_desc):
+    """
+    Procesa imágenes SEGÚN LA DESCRIPCIÓN en segundo plano
+    - Lee código, nombre y descripción
+    - Busca imagen en Bing usando la descripción
+    - Descarga la imagen
+    - Guarda en GitHub
+    - Actualiza productos_api
+    """
+    global productos_api
+    
+    if not gestor_imagenes:
+        print("❌ Gestor de imágenes no disponible")
+        return
+    
+    print(f"\n{'='*60}")
+    print(f"🖼️ PROCESAMIENTO DE IMÁGENES EN BACKGROUND")
+    print(f"   Total a procesar: {len(productos_con_desc)}")
+    
+    try:
+        # Procesar lote de productos
+        resultados = await gestor_imagenes.procesar_lote_productos(
+            productos_con_desc,
+            max_concurrentes=3
+        )
+        
+        imagenes_guardadas = 0
+        
+        # Actualizar productos_api con URLs de imagen
+        for prod_resultado in resultados:
+            if prod_resultado.get('imagen', {}).get('existe'):
+                codigo = prod_resultado.get('Codigo')
+                url_github = prod_resultado.get('imagen', {}).get('url_github')
+                
+                # Buscar y actualizar producto en lista global
+                for i, p in enumerate(productos_api):
+                    if p.get('Codigo') == codigo:
+                        if 'imagen' not in productos_api[i]:
+                            productos_api[i]['imagen'] = {}
+                        
+                        productos_api[i]['imagen']['url_github'] = url_github
+                        productos_api[i]['imagen']['existe'] = True
+                        imagenes_guardadas += 1
+                        print(f"   ✅ {codigo}: Imagen guardada en GitHub")
+                        break
+        
+        # Guardar productos actualizados en GitHub
+        gh.guardar_productos_github(productos_api)
+        
+        print(f"\n{'='*60}")
+        print(f"✅ PROCESAMIENTO COMPLETADO")
+        print(f"   Imágenes descargadas: {imagenes_guardadas}")
+        print(f"   Guardadas en GitHub: {imagenes_guardadas}")
+        print(f"{'='*60}\n")
+    
+    except Exception as e:
+        print(f"\n❌ Error procesando imágenes: {e}")
+        print(f"{traceback.format_exc()}\n")   
 
 @app.get("/debug/productos-estado")
 async def debug_productos_estado():

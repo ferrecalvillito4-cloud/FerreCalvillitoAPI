@@ -24,10 +24,33 @@
             z-index: 1000;
         }
         
-        .producto-card {
+        css.producto-card {
             border: 1px solid #ccc;
             padding: 10px;
             margin: 5px;
+        }
+        /* ✅ AGREGAR ESTO */
+        
+        .producto-imagen {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .producto-imagen-placeholder {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 40px;
         }
         
         .carrito-item {
@@ -383,8 +406,8 @@
 
     <script>
         /* ============================
-                                                                   Variables y referencias DOM
-                                                                   ============================ */
+                                                                                                   Variables y referencias DOM
+                                                                                                   ============================ */
         let usuario = null;
         // Productos/carrito refs (igual que tenías)
         const contenedor = document.getElementById("productos-container");
@@ -580,6 +603,7 @@
         }
 
         function mostrarPagina() {
+            const contenedor = document.getElementById("productos-container");
             contenedor.innerHTML = "";
             if (!productosFiltrados.length) {
                 contenedor.innerHTML = "<p style='text-align:center; font-weight:bold;'>No se encontraron productos</p>";
@@ -591,7 +615,15 @@
                 const card = document.createElement("div");
                 card.className = "producto-card";
                 card.dataset.codigo = p.Codigo;
+
+                // ✅ OBTENER URL DE IMAGEN
+                const tieneImagen = p.imagen && p.imagen.existe && p.imagen.url_github;
+                const imagenHTML = tieneImagen ?
+                    `<img src="${p.imagen.url_github}" alt="${p.Nombre}" class="producto-imagen" onerror="this.style.display='none';">` :
+                    `<div class="producto-imagen-placeholder">📦</div>`;
+
                 card.innerHTML = `
+            ${imagenHTML}
             <div>Código: ${p.Codigo}</div>
             <div>Nombre: ${p.Nombre}</div>
             <div>Precio: $${Number(p.Precio).toFixed(2)}</div>
