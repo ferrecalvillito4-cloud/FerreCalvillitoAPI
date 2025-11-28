@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 import asyncio
 import traceback
-from typing import Optional
 
 # Importar módulos de persistencia
 import productos_api as productos_module
@@ -304,22 +303,11 @@ async def index_desktop():
 # =============================
 
 @app.get("/producto")
-async def obtener_productos(
-    page: int = 1,
-    limit: int = 50,
-    buscar: Optional[str] = None
-):
-    """
-    Devuelve productos paginados CON IMÁGENES desde GitHub
-    
-    Parámetros:
-    - page: número de página (empieza en 1)
-    - limit: productos por página (default: 50, máx: 100)
-    - buscar: filtrar por código, nombre o descripción
-    """
+async def obtener_productos():
+    """Devuelve todos los productos CON IMÁGENES desde GitHub"""
     productos = gh.cargar_productos_github()
     
-    # Asegurar estructura de imagen
+    # Asegurar que cada producto tenga estructura de imagen
     for prod in productos:
         if not prod.get('imagen'):
             prod['imagen'] = {
@@ -327,172 +315,15 @@ async def obtener_productos(
                 'url_github': None
             }
     
-    # 🔍 FILTRAR si hay búsqueda
-    if buscar and buscar.strip():
-        buscar_lower = buscar.lower().strip()
-        productos = [
-            p for p in productos
-            if (
-                buscar_lower in p.get('Codigo', '').lower() or
-                buscar_lower in p.get('Nombre', '').lower() or
-                buscar_lower in p.get('Descripcion', '').lower()
-            )
-        ]
-    
-    # 📊 CALCULAR PAGINACIÓN
-    limit = min(limit, 100)  # Máximo 100 por página
-    total = len(productos)
-    total_pages = (total + limit - 1) // limit  # Redondeo hacia arriba
-    
-    # Validar página
-    if page < 1:
-        page = 1
-    if page > total_pages and total_pages > 0:
-        page = total_pages
-    
-    # Calcular índices
-    start = (page - 1) * limit
-    end = start + limit
-    
-    # Obtener productos de la página actual
-    productos_pagina = productos[start:end]
-    
-    # Estadísticas
-    cant_con_imagen = len([p for p in productos_pagina if p.get('imagen', {}).get('existe')])
-    
+    cant_con_imagen = len([p for p in productos if p.get('imagen', {}).get('existe')])
     print(f"🔍 GET /producto")
-    print(f"   Página: {page}/{total_pages}")
-    print(f"   Mostrando: {len(productos_pagina)} de {total}")
+    print(f"   Total: {len(productos)}")
     print(f"   Con imagen: {cant_con_imagen}")
-    if buscar:
-        print(f"   Búsqueda: '{buscar}'")
     
     return JSONResponse(
-        content={
-            "productos": productos_pagina,
-            "paginacion": {
-                "pagina_actual": page,
-                "productos_por_pagina": limit,
-                "total_productos": total,
-                "total_paginas": total_pages,
-                "tiene_anterior": page > 1,
-                "tiene_siguiente": page < total_pages
-            },
-            "estadisticas": {
-                "con_imagen": cant_con_imagen,
-                "sin_imagen": len(productos_pagina) - cant_con_imagen
-            }
-        },
+        content=productos,
         media_type="application/json; charset=utf-8"
     )
-
-@app.get("/api/productos/estadisticas")
-async def estadisticas_productos():
-    """Devuelve estadísticas generales sin cargar todos los productos"""
-    productos = gh.cargar_productos_github()
-    
-    con_imagen = sum(1 for p in productos if p.get('imagen', {}).get('existe'))
-    con_descripcion = sum(1 for p in productos if p.get('Descripcion', '').strip())
-    
-    return {
-        "total": len(productos),
-        "con_imagen": con_imagen,
-        "sin_imagen": len(productos) - con_imagen,
-        "con_descripcion": con_descripcion,
-        "sin_descripcion": len(productos) - con_descripcion,
-        "porcentaje_con_imagen": round((con_imagen / len(productos) * 100), 2) if productos else 0
-    }
-
-# =============================
-# 🔍 BÚSQUEDA RÁPIDA
-# =============================
-
-@app.get("/api/productos/buscar")
-async def buscar_productos_rapido(
-    q: str,
-    limit: int = 20
-):
-    """
-    Búsqueda rápida de productos (máximo 20 resultados)
-    Ideal para autocompletado
-    """
-    if not q or len(q.strip()) < 2:
-        return {"resultados": [], "cantidad": 0}
-    
-    productos = gh.cargar_productos_github()
-    q_lower = q.lower().strip()
-    
-    resultados = [
-        {
-            "codigo": p.get('Codigo'),
-            "nombre": p.get('Nombre'),
-            "descripcion": p.get('Descripcion', '')[:100],  # Primeros 100 chars
-            "tiene_imagen": p.get('imagen', {}).get('existe', False)
-        }
-        for p in productos
-        if (
-            q_lower in p.get('Codigo', '').lower() or
-            q_lower in p.get('Nombre', '').lower() or
-            q_lower in p.get('Descripcion', '').lower()
-        )
-    ][:limit]
-    
-    return {
-        "resultados": resultados,
-        "cantidad": len(resultados),
-        "busqueda": q
-    }
-
-# =============================
-# 🖼️ PROCESAMIENTO OPTIMIZADO
-# =============================
-
-@app.post("/api/productos/procesar-imagenes-batch")
-async def procesar_imagenes_batch(
-    pagina: int = 1,
-    productos_por_lote: int = 50
-):
-    """
-    Procesa imágenes por lotes para evitar saturar el sistema
-    Útil para procesar 3000 productos de forma controlada
-    """
-    if not gestor_imagenes:
-        return {"ok": False, "error": "Gestor de imágenes no inicializado"}
-    
-    # Obtener productos con descripción
-    productos = gh.cargar_productos_github()
-    productos_con_desc = [
-        p for p in productos 
-        if p.get('Descripcion') and p['Descripcion'].strip()
-        and not p.get('imagen', {}).get('existe')  # Solo los que NO tienen imagen
-    ]
-    
-    # Calcular paginación
-    total = len(productos_con_desc)
-    total_paginas = (total + productos_por_lote - 1) // productos_por_lote
-    
-    if pagina < 1 or pagina > total_paginas:
-        return {
-            "ok": False,
-            "error": f"Página inválida. Rango: 1-{total_paginas}"
-        }
-    
-    # Obtener lote actual
-    start = (pagina - 1) * productos_por_lote
-    end = start + productos_por_lote
-    lote = productos_con_desc[start:end]
-    
-    # Procesar en background
-    asyncio.create_task(procesar_imagenes_background(lote))
-    
-    return {
-        "ok": True,
-        "mensaje": f"Procesando lote {pagina}/{total_paginas}",
-        "lote_actual": pagina,
-        "total_lotes": total_paginas,
-        "procesando": len(lote),
-        "pendientes": total - end if end < total else 0
-    }
 
 @app.get("/api/productos/{codigo}/imagen")
 async def obtener_imagen_producto(codigo: str):
