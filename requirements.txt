@@ -9,4 +9,5 @@ python-dotenv
 itsdangerous
 httpx
 requests
+aiohttp
 Pillow
