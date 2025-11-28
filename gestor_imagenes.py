@@ -224,7 +224,6 @@ class GestorImagenesProductos:
         tareas = [procesar_con_semaforo(p) for p in productos]
         resultados = await asyncio.gather(*tareas, return_exceptions=True)
         return [r for r in resultados if not isinstance(r, Exception)]
-
 # ✅ EJEMPLO DE USO:
 """
 async def main():
