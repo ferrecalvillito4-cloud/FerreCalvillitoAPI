@@ -360,7 +360,6 @@ async def procesar_imagenes_manual():
         if p.get('Descripcion') and p['Descripcion'].strip()
     ]
     
-    
     if not productos_con_desc:
         return {"ok": False, "error": "No hay productos con descripción"}
     
