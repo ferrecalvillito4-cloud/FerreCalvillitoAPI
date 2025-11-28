@@ -488,6 +488,44 @@ async def procesar_imagenes_background(productos_con_desc):
         print(f"\n❌ Error procesando imágenes: {e}")
         print(f"{traceback.format_exc()}\n")   
 
+@app.get("/api/productos/progreso-imagenes")
+async def progreso_imagenes():
+    """
+    Muestra el progreso del procesamiento de imágenes
+    Útil para monitorear mientras se descargan
+    """
+    productos = gh.cargar_productos_github()
+    
+    total = len(productos)
+    con_descripcion = len([p for p in productos if p.get('Descripcion', '').strip()])
+    con_imagen = len([p for p in productos if p.get('imagen', {}).get('existe')])
+    sin_imagen_con_desc = len([
+        p for p in productos 
+        if p.get('Descripcion', '').strip() 
+        and not p.get('imagen', {}).get('existe')
+    ])
+    
+    porcentaje = round((con_imagen / con_descripcion * 100), 2) if con_descripcion > 0 else 0
+    
+    # Mensaje personalizado
+    if sin_imagen_con_desc == 0:
+        mensaje = "✅ Todas las imágenes han sido descargadas"
+    elif con_imagen == 0:
+        mensaje = "⏳ Iniciando descarga de imágenes..."
+    else:
+        mensaje = f"⏳ Descargando imágenes... {con_imagen}/{con_descripcion}"
+    
+    return {
+        "mensaje": mensaje,
+        "total_productos": total,
+        "con_descripcion": con_descripcion,
+        "con_imagen": con_imagen,
+        "pendientes": sin_imagen_con_desc,
+        "porcentaje_completado": porcentaje,
+        "estado": "completo" if sin_imagen_con_desc == 0 else "en_progreso",
+        "tiempo_estimado_min": round((sin_imagen_con_desc / 3) * 10 / 60, 1)  # Estimación
+    }
+
 @app.get("/debug/productos-estado")
 async def debug_productos_estado():
     """Debug de estado de productos"""
