@@ -452,7 +452,7 @@ async def procesar_imagenes_background(productos_con_desc):
         # Procesar lote de productos
         resultados = await gestor_imagenes.procesar_lote_productos(
             productos_con_desc,
-            max_concurrentes=3
+            max_concurrentes=10
         )
         
         imagenes_guardadas = 0
