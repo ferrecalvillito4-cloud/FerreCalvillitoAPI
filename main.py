@@ -178,17 +178,16 @@ async def startup_event():
         print("\n🖼️ PASO 1.5: Inicializando Gestor de Imágenes...")
         try:
             github_owner = os.getenv("GITHUB_OWNER")
-github_repo_name = os.getenv("GITHUB_REPO")
+            github_repo_name = os.getenv("GITHUB_REPO")
 
-gestor_imagenes = GestorImagenesProductos(
-    directorio_imagenes="imagenes",
-    github_token=os.getenv("GITHUB_TOKEN"),
-    github_repo=f"{github_owner}/{github_repo_name}"   # ✅ CORRECTO
-)
-
+            gestor_imagenes = GestorImagenesProductos(
+                directorio_imagenes="imagenes",
+                github_token=os.getenv("GITHUB_TOKEN"),
+                github_repo=f"{github_owner}/{github_repo_name}"
+            )
             print(f"   ✅ Gestor de Imágenes inicializado")
             print(f"   📁 Directorio: {IMAGENES_DIR}")
-            print(f"   🔐 GitHub: {GITHUB_REPO or 'No configurado'}")
+            print(f"   🔐 GitHub: {github_repo_name or 'No configurado'}")
         except Exception as e:
             print(f"   ⚠️ Error inicializando imágenes: {e}")
             gestor_imagenes = None
