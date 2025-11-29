@@ -876,6 +876,56 @@ async def eliminar_telefono(id: str):
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/productos/actualizar-imagen")
+async def actualizar_imagen_producto(data: dict):
+    """
+    Recibe:
+    {
+        "Codigo": "ABC123",
+        "imagen": {
+            "existe": true,
+            "url_github": "https://...."
+        }
+    }
+    Y actualiza SOLO ese producto.
+    """
+
+    codigo = data.get("Codigo")
+    nueva_img = data.get("imagen")
+
+    if not codigo or not nueva_img:
+        return JSONResponse(
+            {"ok": False, "error": "Faltan datos"},
+            status_code=400
+        )
+
+    global productos_api
+
+    # Buscar el producto
+    encontrado = False
+    for prod in productos_api:
+        if prod.get("Codigo") == codigo:
+            # crear campo si no existe
+            if "imagen" not in prod:
+                prod["imagen"] = {}
+
+            prod["imagen"]["existe"] = nueva_img.get("existe", False)
+            prod["imagen"]["url_github"] = nueva_img.get("url_github")
+            prod["imagen"]["fuente"] = "manual"
+            encontrado = True
+            break
+
+    if not encontrado:
+        return JSONResponse(
+            {"ok": False, "error": "Producto no encontrado"},
+            status_code=404
+        )
+
+    # Guardar en GitHub
+    gh.guardar_productos_github(productos_api)
+
+    return {"ok": True, "mensaje": "Imagen actualizada correctamente"}
+
 # =============================
 # 🔍 DEBUG
 # =============================
