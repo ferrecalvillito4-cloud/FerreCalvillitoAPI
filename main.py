@@ -430,63 +430,53 @@ async def admin_upload_productos(data: list[dict]):
         return {"ok": False, "error": str(e)}
     
 async def procesar_imagenes_background(productos_con_desc):
-    """
-    Procesa imágenes SEGÚN LA DESCRIPCIÓN en segundo plano
-    - Lee código, nombre y descripción
-    - Busca imagen en Bing usando la descripción
-    - Descarga la imagen
-    - Guarda en GitHub
-    - Actualiza productos_api
-    """
     global productos_api
-    
+
     if not gestor_imagenes:
-        print("❌ Gestor de imágenes no disponible")
+        print("❌ Gestor no disponible")
         return
-    
-    print(f"\n{'='*60}")
-    print(f"🖼️ PROCESAMIENTO DE IMÁGENES EN BACKGROUND")
-    print(f"   Total a procesar: {len(productos_con_desc)}")
-    
+
+    print("Procesando imágenes...")
+
     try:
-        # Procesar lote de productos
+        # Guarda TODOS los productos en un diccionario indexado por código
+        productos_completos = {p["Codigo"]: p for p in productos_api}
+
+        # Procesa solo los necesarios
         resultados = await gestor_imagenes.procesar_lote_productos(
             productos_con_desc,
             max_concurrentes=10
         )
-        
-        imagenes_guardadas = 0
-        
-        # Actualizar productos_api con URLs de imagen
-        for prod_resultado in resultados:
-            if prod_resultado.get('imagen', {}).get('existe'):
-                codigo = prod_resultado.get('Codigo')
-                url_github = prod_resultado.get('imagen', {}).get('url_github')
-                
-                # Buscar y actualizar producto en lista global
-                for i, p in enumerate(productos_api):
-                    if p.get('Codigo') == codigo:
-                        if 'imagen' not in productos_api[i]:
-                            productos_api[i]['imagen'] = {}
-                        
-                        productos_api[i]['imagen']['url_github'] = url_github
-                        productos_api[i]['imagen']['existe'] = True
-                        imagenes_guardadas += 1
-                        print(f"   ✅ {codigo}: Imagen guardada en GitHub")
-                        break
-        
-        # Guardar productos actualizados en GitHub
-        gh.guardar_productos_github(productos_api)
-        
-        print(f"\n{'='*60}")
-        print(f"✅ PROCESAMIENTO COMPLETADO")
-        print(f"   Imágenes descargadas: {imagenes_guardadas}")
-        print(f"   Guardadas en GitHub: {imagenes_guardadas}")
-        print(f"{'='*60}\n")
-    
+
+        # Actualiza solo las imágenes, sin reemplazar la lista completa
+        for prod in resultados:
+            codigo = prod.get("Codigo")
+
+            if not codigo:
+                continue
+
+            url_img = prod.get("imagen", {}).get("url_github")
+
+            if not url_img:
+                continue
+
+            if codigo in productos_completos:
+                productos_completos[codigo]["imagen"] = {
+                    "existe": True,
+                    "url_github": url_img
+                }
+
+        # Ya acabamos: convertimos el diccionario a lista
+        productos_actualizados = list(productos_completos.values())
+
+        # Y AHORA SÍ guardamos todos
+        gh.guardar_productos_github(productos_actualizados)
+
+        # Actualizamos la variable global
+        productos_api = productos_actualizados
+
     except Exception as e:
-        print(f"\n❌ Error procesando imágenes: {e}")
-        print(f"{traceback.format_exc()}\n")   
+        print("Error:", e)
 
 @app.get("/api/productos/progreso-imagenes")
 async def progreso_imagenes():
