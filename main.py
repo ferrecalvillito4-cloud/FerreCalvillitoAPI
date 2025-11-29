@@ -375,54 +375,82 @@ async def procesar_imagenes_manual():
 
 @app.post("/api/productos/admin-upload")
 async def admin_upload_productos(data: list[dict]):
-    """Admin upload de productos + PROCESAR IMÁGENES AUTOMÁTICAMENTE"""
+    """Admin upload de productos PRESERVANDO imágenes existentes"""
     global productos_api
     
     print(f"\n{'='*60}")
-    print(f"📤 ADMIN UPLOAD - PRODUCTOS + IMÁGENES")
-    print(f"   Cantidad: {len(data)}")
+    print(f"📤 ADMIN UPLOAD - PRODUCTOS (preservando imágenes)")
+    print(f"   Cantidad recibida: {len(data)}")
     
     if not data:
         return {"ok": False, "error": "Lista vacía"}
     
     try:
-        # 1️⃣ Actualizar memoria
-        productos_api = data
+        # 1️⃣ CARGAR PRODUCTOS ACTUALES DESDE GITHUB
+        productos_actuales = gh.cargar_productos_github()
         
-        # 2️⃣ Guardar en GitHub
+        # 2️⃣ CREAR DICCIONARIO DE IMÁGENES EXISTENTES
+        imagenes_existentes = {}
+        for prod in productos_actuales:
+            codigo = prod.get('Codigo')
+            if codigo and prod.get('imagen'):
+                imagenes_existentes[codigo] = prod['imagen']
+        
+        print(f"   📦 Imágenes existentes: {len(imagenes_existentes)}")
+        
+        # 3️⃣ COMBINAR: datos nuevos + imágenes existentes
+        for prod in data:
+            codigo = prod.get('Codigo')
+            
+            # Si el producto NO trae imagen O trae imagen vacía
+            if not prod.get('imagen') or not prod['imagen'].get('url_github'):
+                # Buscar si ya tiene una imagen guardada
+                if codigo in imagenes_existentes:
+                    prod['imagen'] = imagenes_existentes[codigo]
+                    print(f"   ✅ {codigo}: Imagen preservada")
+                else:
+                    # Producto nuevo sin imagen
+                    prod['imagen'] = {
+                        'existe': False,
+                        'url_github': None
+                    }
+        
+        # 4️⃣ Actualizar memoria y GitHub
+        productos_api = data
         gh.guardar_productos_github(data)
         
-        # 3️⃣ PROCESAR IMÁGENES AUTOMÁTICAMENTE
-        print(f"\n🖼️ Iniciando procesamiento de imágenes...")
+        # 5️⃣ PROCESAR IMÁGENES AUTOMÁTICAMENTE (solo para nuevos)
+        print(f"\n🖼️ Verificando productos sin imagen...")
         
         if gestor_imagenes:
-            # Filtrar productos CON descripción (solo estos buscan imagen)
-            productos_con_desc = [
+            productos_sin_imagen = [
                 p for p in data 
                 if p.get('Descripcion') and p['Descripcion'].strip()
+                and not p.get('imagen', {}).get('url_github')
             ]
             
-            print(f"   📦 Productos con descripción: {len(productos_con_desc)}")
+            print(f"   📦 Productos sin imagen: {len(productos_sin_imagen)}")
             
-            if productos_con_desc:
+            if productos_sin_imagen:
                 try:
-                    # Procesar en segundo plano
                     asyncio.create_task(
-                        procesar_imagenes_background(productos_con_desc)
+                        procesar_imagenes_background(productos_sin_imagen)
                     )
-                    print(f"   ⏳ Procesando imágenes en segundo plano...")
+                    print(f"   ⏳ Procesando imágenes nuevas en segundo plano...")
                 except Exception as e:
-                    print(f"   ⚠️ Error inicializando procesamiento: {e}")
+                    print(f"   ⚠️ Error: {e}")
         
-        print(f"✅ Productos guardados en GitHub")
+        con_imagen = len([p for p in data if p.get('imagen', {}).get('url_github')])
+        print(f"✅ Productos guardados")
+        print(f"   Con imagen: {con_imagen}/{len(data)}")
         print(f"{'='*60}\n")
         
         return {
             "ok": True,
             "mensaje": f"✅ {len(data)} productos guardados",
             "guardados": len(data),
-            "con_descripcion": len([p for p in data if p.get('Descripcion')]),
-            "procesando_imagenes": True,
+            "con_imagen": con_imagen,
+            "preservadas": len([p for p in data if p['Codigo'] in imagenes_existentes]),
             "timestamp": datetime.now().isoformat()
         }
     
@@ -437,47 +465,40 @@ async def procesar_imagenes_background(productos_con_desc):
         print("❌ Gestor no disponible")
         return
 
-    print("Procesando imágenes...")
+    print(f"\n🖼️ Procesando {len(productos_con_desc)} imágenes...")
 
     try:
-        # Guarda TODOS los productos en un diccionario indexado por código
-        productos_completos = {p["Codigo"]: p for p in productos_api}
-
-        # Procesa solo los necesarios
+        # 1️⃣ Cargar productos COMPLETOS desde GitHub
+        productos_completos = {p["Codigo"]: p for p in gh.cargar_productos_github()}
+        
+        # 2️⃣ Procesar solo los que NO tienen imagen
         resultados = await gestor_imagenes.procesar_lote_productos(
             productos_con_desc,
             max_concurrentes=10
         )
 
-        # Actualiza solo las imágenes, sin reemplazar la lista completa
+        # 3️⃣ Actualizar SOLO las nuevas imágenes
         for prod in resultados:
             codigo = prod.get("Codigo")
-
             if not codigo:
                 continue
 
             url_img = prod.get("imagen", {}).get("url_github")
-
-            if not url_img:
-                continue
-
-            if codigo in productos_completos:
+            if url_img and codigo in productos_completos:
                 productos_completos[codigo]["imagen"] = {
                     "existe": True,
                     "url_github": url_img
                 }
 
-        # Ya acabamos: convertimos el diccionario a lista
+        # 4️⃣ Guardar todos
         productos_actualizados = list(productos_completos.values())
-
-        # Y AHORA SÍ guardamos todos
         gh.guardar_productos_github(productos_actualizados)
-
-        # Actualizamos la variable global
         productos_api = productos_actualizados
+        
+        print(f"✅ Imágenes actualizadas y guardadas\n")
 
     except Exception as e:
-        print("Error:", e)
+        print(f"❌ Error: {e}\n")
 
 @app.get("/api/productos/progreso-imagenes")
 async def progreso_imagenes():
