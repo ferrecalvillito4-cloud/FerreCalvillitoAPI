@@ -338,8 +338,16 @@
             <div id="carrito-icon" style="cursor:pointer;">🛒 <span id="carrito-count">0</span></div>
             <div id="usuario-info" style="margin-left:10px; cursor:pointer;">👤 Usuario</div>
         </div>
-        <div id="pagina-info" style="text-align: center; color: white; font-size: 12px; margin-top: 8px; opacity: 0.9;">
-            Página <span id="pagina-actual">1</span> de <span id="pagina-total">1</span>
+        <div id="pagina-info" style="display: inline-flex; align-items: center; gap: 6px; margin: 12px auto 0; padding: 6px 14px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; color: white; font-size: 13px; font-weight: 500;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span id="pagina-actual" style="color: #FFD700; font-weight: 700;">1</span>
+            <span style="opacity: 0.7;">/</span>
+            <span id="pagina-total" style="color: #FFD700; font-weight: 600;">1</span>
         </div>
 
         <!-- Botones de información de contacto -->
@@ -435,8 +443,8 @@
 
     <script>
         /* ============================
-                                                                                                                                                                   Variables y referencias DOM
-                                                                                                                                                                   ============================ */
+                                                                                                                                                                                           Variables y referencias DOM
+                                                                                                                                                                                           ============================ */
         let usuario = null;
         // Productos/carrito refs (igual que tenías)
         const contenedor = document.getElementById("productos-container");
