@@ -18,6 +18,27 @@
         }
         /* ========== HEADER ========== */
         
+        #pagina-info {
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            margin-top: 8px;
+            opacity: 0.9;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            width: auto;
+            margin: 8px auto 0;
+        }
+        
+        #pagina-info span {
+            font-weight: 700;
+            color: #FFD700;
+            /* Dorado para resaltar */
+        }
+        
         header {
             background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
             color: white;
@@ -337,7 +358,9 @@
         
         #abrir-chat {
             position: fixed;
-            bottom: 16px;
+            /* ✅ Solo una vez */
+            bottom: 80px;
+            /* ✅ Más arriba para que no tape nada */
             right: 16px;
             background: linear-gradient(135deg, #25D366 0%, #20BA5E 100%);
             color: white;
@@ -352,7 +375,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
         }
         
         #abrir-chat:active {
@@ -648,6 +670,9 @@
             <div id="carrito-icon">🛒<span id="carrito-count">0</span></div>
             <div id="usuario-info">👤</div>
         </div>
+        <div id="pagina-info" style="text-align: center; color: white; font-size: 12px; margin-top: 8px; opacity: 0.9;">
+            Página <span id="pagina-actual">1</span> de <span id="pagina-total">1</span>
+        </div>
         <div class="buscador-mobile">
             <input type="text" id="busqueda" placeholder="Buscar...">
             <button id="btn-buscar">🔍</button>
@@ -821,6 +846,11 @@
                 contenedor.innerHTML = "<p style='grid-column:1/-1; text-align:center;'>No hay productos</p>";
                 return;
             }
+
+            const totalPaginas = Math.ceil(productosFiltrados.length / productosPorPagina);
+            document.getElementById("pagina-actual").textContent = paginaActual + 1;
+            document.getElementById("pagina-total").textContent = totalPaginas;
+
             const inicio = paginaActual * productosPorPagina;
             const fin = Math.min(inicio + productosPorPagina, productosFiltrados.length);
             productosFiltrados.slice(inicio, fin).forEach(p => {
