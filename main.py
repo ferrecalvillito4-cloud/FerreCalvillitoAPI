@@ -505,41 +505,68 @@ async def procesar_imagenes_background(productos_con_desc):
 
 @app.get("/api/productos/progreso-imagenes")
 async def progreso_imagenes():
-    """
-    Muestra el progreso del procesamiento de imágenes
-    Útil para monitorear mientras se descargan
-    """
-    productos = gh.cargar_productos_github()
+    """Endpoint para ver progreso desde cualquier lugar"""
     
-    total = len(productos)
-    con_descripcion = len([p for p in productos if p.get('Descripcion', '').strip()])
-    con_imagen = len([p for p in productos if p.get('imagen', {}).get('existe')])
-    sin_imagen_con_desc = len([
-        p for p in productos 
-        if p.get('Descripcion', '').strip() 
-        and not p.get('imagen', {}).get('existe')
-    ])
+    if not gestor_imagenes:
+        return {"error": "Gestor no inicializado"}
     
-    porcentaje = round((con_imagen / con_descripcion * 100), 2) if con_descripcion > 0 else 0
+    try:
+        # Leer progreso desde archivo
+        progreso_file = os.path.join(IMAGENES_DIR, "progreso.json")
+        
+        if os.path.exists(progreso_file):
+            with open(progreso_file, 'r') as f:
+                progreso = json.load(f)
+        else:
+            progreso = {"procesados": 0, "total": 0, "ultimo_lote": 0}
+        
+        # Obtener productos totales
+        productos = gh.cargar_productos_github()
+        total = len(productos)
+        con_imagen = len([p for p in productos if p.get('imagen', {}).get('existe')])
+        sin_imagen = total - con_imagen
+        
+        procesados = progreso.get("procesados", 0)
+        porcentaje = round((con_imagen / total * 100), 2) if total > 0 else 0
+        
+        # Calcular tiempo estimado
+        if sin_imagen > 0:
+            # 50 productos por lote, 2 min por lote, ~5 segundos por producto
+            lotes_restantes = (sin_imagen / 50)
+            minutos_estimados = lotes_restantes * 2
+            tiempo_estimado = f"{int(minutos_estimados)} minutos"
+        else:
+            tiempo_estimado = "Completado"
+        
+        # Estado del proceso
+        if sin_imagen == 0:
+            estado = "✅ Completado"
+            mensaje = "Todas las imágenes han sido procesadas"
+        elif procesados > 0:
+            estado = "⏳ Procesando"
+            mensaje = f"Procesando lote {progreso.get('ultimo_lote', 0)}..."
+        else:
+            estado = "⏸️ Pausado"
+            mensaje = "Proceso no iniciado o pausado"
+        
+        return {
+            "estado": estado,
+            "mensaje": mensaje,
+            "total_productos": total,
+            "con_imagen": con_imagen,
+            "sin_imagen": sin_imagen,
+            "porcentaje_completado": porcentaje,
+            "procesados_actual": procesados,
+            "ultimo_lote": progreso.get("ultimo_lote", 0),
+            "tiempo_estimado": tiempo_estimado,
+            "timestamp": datetime.now().isoformat()
+        }
     
-    # Mensaje personalizado
-    if sin_imagen_con_desc == 0:
-        mensaje = "✅ Todas las imágenes han sido descargadas"
-    elif con_imagen == 0:
-        mensaje = "⏳ Iniciando descarga de imágenes..."
-    else:
-        mensaje = f"⏳ Descargando imágenes... {con_imagen}/{con_descripcion}"
-    
-    return {
-        "mensaje": mensaje,
-        "total_productos": total,
-        "con_descripcion": con_descripcion,
-        "con_imagen": con_imagen,
-        "pendientes": sin_imagen_con_desc,
-        "porcentaje_completado": porcentaje,
-        "estado": "completo" if sin_imagen_con_desc == 0 else "en_progreso",
-        "tiempo_estimado_min": round((sin_imagen_con_desc / 3) * 10 / 60, 1)  # Estimación
-    }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.get("/debug/productos-estado")
 async def debug_productos_estado():
@@ -961,6 +988,23 @@ async def actualizar_imagen_producto(data: list[dict]):
         "ok": True,
         "actualizados": actualizados,
         "mensaje": f"✅ {actualizados} imágenes actualizadas"
+    }
+
+@app.get("/api/productos/progreso-imagenes-detallado")
+async def progreso_detallado():
+    """Muestra progreso detallado del procesamiento"""
+    if not gestor_imagenes:
+        return {"error": "Gestor no disponible"}
+    
+    progreso = gestor_imagenes.obtener_progreso()
+    
+    return {
+        "procesados": progreso["procesados"],
+        "total": progreso["total"],
+        "porcentaje": progreso["porcentaje"],
+        "ultimo_lote": progreso["ultimo_lote"],
+        "estado": "completo" if progreso["procesados"] >= progreso["total"] else "en_progreso",
+        "timestamp": datetime.now().isoformat()
     }
 
 # =============================
