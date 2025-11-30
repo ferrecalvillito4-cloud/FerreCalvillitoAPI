@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progreso Imágenes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .estado {
+            text-align: center;
+            font-size: 64px;
+            margin: 20px 0;
+        }
+        
+        .mensaje {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            min-height: 50px;
+        }
+        
+        .progress-container {
+            background: #f0f0f0;
+            border-radius: 15px;
+            height: 40px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card .label {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-card .value {
+            color: #333;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .timestamp {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>🖼️ Progreso de Imágenes</h1>
+
+        <div id="estado" class="estado loading">⏳</div>
+        <div id="mensaje" class="mensaje">Conectando con el servidor...</div>
+
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar" style="width: 0%">0%</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">Total Productos</div>
+                <div class="value" id="total">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Con Imagen</div>
+                <div class="value" id="con-imagen">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Sin Imagen</div>
+                <div class="value" id="sin-imagen">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Tiempo Estimado</div>
+                <div class="value" id="tiempo" style="font-size: 20px;">-</div>
+            </div>
+        </div>
+
+        <div id="timestamp" class="timestamp"></div>
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        let errorCount = 0;
+
+        async function actualizarProgreso() {
+            try {
+                const response = await fetch('/api/productos/progreso-imagenes');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Ocultar error si había
+                document.getElementById('error').style.display = 'none';
+                errorCount = 0;
+
+                // Actualizar emoji de estado
+                const estadoEl = document.getElementById('estado');
+                estadoEl.textContent = data.estado.split(' ')[0];
+                estadoEl.classList.remove('loading');
+
+                // Actualizar mensaje
+                document.getElementById('mensaje').textContent = data.mensaje;
+
+                // Actualizar barra de progreso
+                const porcentaje = data.progreso.porcentaje_completado || 0;
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = porcentaje + '%';
+                progressBar.textContent = porcentaje.toFixed(1) + '%';
+
+                // Cambiar color según estado
+                if (data.color) {
+                    progressBar.style.background = data.color;
+                }
+
+                // Actualizar estadísticas
+                document.getElementById('total').textContent =
+                    (data.progreso.total_productos || 0).toLocaleString();
+                document.getElementById('con-imagen').textContent =
+                    (data.progreso.con_imagen || 0).toLocaleString();
+                document.getElementById('sin-imagen').textContent =
+                    (data.progreso.sin_imagen || 0).toLocaleString();
+                document.getElementById('tiempo').textContent =
+                    data.proceso.tiempo_estimado || '-';
+
+                // Timestamp
+                const fecha = new Date(data.timestamp);
+                document.getElementById('timestamp').textContent =
+                    `Última actualización: ${fecha.toLocaleTimeString('es-MX')}`;
+
+            } catch (error) {
+                console.error('Error:', error);
+                errorCount++;
+
+                const errorEl = document.getElementById('error');
+                errorEl.textContent = `❌ Error de conexión (${errorCount} intentos)`;
+                errorEl.style.display = 'block';
+
+                if (errorCount > 3) {
+                    document.getElementById('mensaje').textContent =
+                        'Problemas de conexión. Reintentando...';
+                }
+            }
+        }
+
+        // Actualizar inmediatamente y cada 5 segundos
+        actualizarProgreso();
+        setInterval(actualizarProgreso, 5000);
+    </script>
+</body>
+
+</html>
