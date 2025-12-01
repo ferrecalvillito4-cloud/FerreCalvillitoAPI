@@ -593,6 +593,8 @@ async def progreso_imagenes():
             "timestamp": datetime.now().isoformat()
         }
     
+
+    
     except Exception as e:
         return {
             "error": True,
