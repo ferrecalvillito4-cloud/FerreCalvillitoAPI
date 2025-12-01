@@ -508,7 +508,21 @@ async def progreso_imagenes():
     """Endpoint para ver progreso desde cualquier lugar"""
     
     if not gestor_imagenes:
-        return {"error": "Gestor no inicializado"}
+        return {
+            "error": True,
+            "estado": "❌ Error",
+            "mensaje": "Gestor no inicializado",
+            "progreso": {
+                "porcentaje_completado": 0,
+                "total_productos": 0,
+                "con_imagen": 0,
+                "sin_imagen": 0
+            },
+            "proceso": {
+                "tiempo_estimado": "N/A"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
     
     try:
         # Leer progreso desde archivo
@@ -534,7 +548,15 @@ async def progreso_imagenes():
             # 50 productos por lote, 2 min por lote, ~5 segundos por producto
             lotes_restantes = (sin_imagen / 50)
             minutos_estimados = lotes_restantes * 2
-            tiempo_estimado = f"{int(minutos_estimados)} minutos"
+            
+            if minutos_estimados < 1:
+                tiempo_estimado = "< 1 minuto"
+            elif minutos_estimados < 60:
+                tiempo_estimado = f"{int(minutos_estimados)} minutos"
+            else:
+                horas = int(minutos_estimados / 60)
+                mins = int(minutos_estimados % 60)
+                tiempo_estimado = f"{horas}h {mins}m"
         else:
             tiempo_estimado = "Completado"
         
@@ -542,29 +564,49 @@ async def progreso_imagenes():
         if sin_imagen == 0:
             estado = "✅ Completado"
             mensaje = "Todas las imágenes han sido procesadas"
+            color = "linear-gradient(90deg, #10b981 0%, #059669 100%)"
         elif procesados > 0:
             estado = "⏳ Procesando"
-            mensaje = f"Procesando lote {progreso.get('ultimo_lote', 0)}..."
+            mensaje = f"Procesando lote {progreso.get('ultimo_lote', 0)}... ({con_imagen}/{total})"
+            color = "linear-gradient(90deg, #667eea 0%, #764ba2 100%)"
         else:
             estado = "⏸️ Pausado"
             mensaje = "Proceso no iniciado o pausado"
+            color = "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
         
         return {
+            "error": False,
             "estado": estado,
             "mensaje": mensaje,
-            "total_productos": total,
-            "con_imagen": con_imagen,
-            "sin_imagen": sin_imagen,
-            "porcentaje_completado": porcentaje,
-            "procesados_actual": procesados,
-            "ultimo_lote": progreso.get("ultimo_lote", 0),
-            "tiempo_estimado": tiempo_estimado,
+            "color": color,
+            "progreso": {
+                "total_productos": total,
+                "con_imagen": con_imagen,
+                "sin_imagen": sin_imagen,
+                "porcentaje_completado": porcentaje,
+                "procesados_actual": procesados,
+                "ultimo_lote": progreso.get("ultimo_lote", 0)
+            },
+            "proceso": {
+                "tiempo_estimado": tiempo_estimado
+            },
             "timestamp": datetime.now().isoformat()
         }
     
     except Exception as e:
         return {
-            "error": str(e),
+            "error": True,
+            "estado": "❌ Error",
+            "mensaje": f"Error al obtener progreso: {str(e)}",
+            "progreso": {
+                "porcentaje_completado": 0,
+                "total_productos": 0,
+                "con_imagen": 0,
+                "sin_imagen": 0
+            },
+            "proceso": {
+                "tiempo_estimado": "N/A"
+            },
             "timestamp": datetime.now().isoformat()
         }
 
