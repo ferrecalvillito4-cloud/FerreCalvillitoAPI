@@ -67,18 +67,10 @@ class GestorImagenesProductos:
             return None
 
     async def procesar_producto(self, codigo: str, nombre: str, descripcion: str, session: aiohttp.ClientSession) -> dict:
-        """Busca URL de imagen para un producto"""
+        """Busca URL de imagen para un producto usando solo el Nombre"""
         
-        # 1) Determinar término de búsqueda
-        termino = ""
-        fuente = "sin_datos"
-        
-        if descripcion and descripcion.strip():
-            termino = descripcion.strip()
-            fuente = "descripcion"
-        elif nombre and nombre.strip():
-            termino = nombre.strip()
-            fuente = "nombre"
+        # ✅ Usar solo el nombre (tus productos no tienen Descripcion)
+        termino = nombre.strip() if nombre else ""
 
         if not termino:
             return {
@@ -89,10 +81,12 @@ class GestorImagenesProductos:
                 }
             }
 
-        logger.info(f"🔍 {codigo}: '{termino[:50]}'")
+        # Limpiar el nombre (quitar caracteres especiales al inicio)
+        termino_limpio = termino.lstrip('/').strip()
+        logger.info(f"🔍 {codigo}: '{termino_limpio[:60]}'")
 
         # 2) Buscar imagen
-        url_img = await self.buscar_imagen_duckduckgo(termino, session)
+        url_img = await self.buscar_imagen_duckduckgo(termino_limpio, session)
 
         if url_img:
             logger.info(f"   ✅ Encontrada")
@@ -141,8 +135,8 @@ class GestorImagenesProductos:
                     async with semaforo:
                         return await self.procesar_producto(
                             prod.get("Codigo", ""),
-                            prod.get("Nombre", ""),
-                            prod.get("Descripcion", ""),
+                            prod.get("Nombre", ""),  # ✅ Solo usa Nombre
+                            "",  # Descripcion vacío (no existe en tus productos)
                             session
                         )
 

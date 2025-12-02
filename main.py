@@ -353,28 +353,51 @@ async def obtener_imagen_producto(codigo: str):
 
 @app.post("/api/productos/procesar-imagenes-manual")
 async def procesar_imagenes_manual():
-    """Procesa imágenes manualmente de todos los productos con descripción"""
+    """Procesa imágenes manualmente de productos sin imagen"""
     
     if not gestor_imagenes:
         return {"ok": False, "error": "Gestor de imágenes no inicializado"}
     
-    # Filtrar productos con descripción
-    productos_con_desc = [
-        p for p in productos_api 
-        if p.get('Descripcion') and p['Descripcion'].strip()
-    ]
+    try:
+        # Cargar productos desde GitHub
+        productos = gh.cargar_productos_github()
+        
+        # ✅ CORRECCIÓN: Filtrar productos SIN imagen que tengan Nombre
+        # (tus productos NO tienen campo "Descripcion", solo "Nombre")
+        productos_sin_imagen = [
+            p for p in productos 
+            if not p.get('imagen', {}).get('url_github')
+            and p.get('Nombre')  # ✅ Solo verifica Nombre
+        ]
+        
+        if not productos_sin_imagen:
+            return {
+                "ok": False, 
+                "error": "Todos los productos ya tienen imagen"
+            }
+        
+        # Tomar solo los primeros 50
+        lote = productos_sin_imagen[:50]
+        
+        print(f"\n{'='*60}")
+        print(f"📦 PROCESANDO LOTE MANUAL")
+        print(f"   Productos a procesar: {len(lote)}")
+        print(f"   Pendientes totales: {len(productos_sin_imagen)}")
+        print(f"{'='*60}\n")
+        
+        # Procesar en background
+        asyncio.create_task(procesar_imagenes_background(lote))
+        
+        return {
+            "ok": True,
+            "mensaje": f"✅ Procesando {len(lote)} productos",
+            "procesando": len(lote),
+            "pendientes": len(productos_sin_imagen)
+        }
     
-    if not productos_con_desc:
-        return {"ok": False, "error": "No hay productos con descripción"}
-    
-    # Procesar en background
-    asyncio.create_task(procesar_imagenes_background(productos_con_desc))
-    
-    return {
-        "ok": True,
-        "mensaje": f"Procesando {len(productos_con_desc)} imágenes",
-        "procesando": len(productos_con_desc)
-    }
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"ok": False, "error": str(e)}
 
 @app.post("/api/productos/admin-upload")
 async def admin_upload_productos(data: list[dict]):
@@ -461,47 +484,58 @@ async def admin_upload_productos(data: list[dict]):
         print(f"❌ Error: {e}\n")
         return {"ok": False, "error": str(e)}
     
-async def procesar_imagenes_background(productos_con_desc):
+async def procesar_imagenes_background(productos_lote):
+    """Procesa un lote de productos en segundo plano"""
     global productos_api
 
     if not gestor_imagenes:
         print("❌ Gestor no disponible")
         return
 
-    print(f"\n🖼️ Procesando {len(productos_con_desc)} imágenes...")
+    print(f"\n🖼️ PROCESANDO {len(productos_lote)} IMÁGENES...")
 
     try:
-        # 1️⃣ Cargar productos COMPLETOS desde GitHub
-        productos_completos = {p["Codigo"]: p for p in gh.cargar_productos_github()}
-        
-        # 2️⃣ Procesar solo los que NO tienen imagen
+        # 1️⃣ Procesar el lote (pasando Nombre como descripción)
         resultados = await gestor_imagenes.procesar_lote_productos(
-            productos_con_desc,
-            max_concurrentes=10
+            productos_lote,
+            max_concurrentes=3,
+            productos_por_lote=50,
+            pausa_entre_lotes=120
         )
 
-        # 3️⃣ Actualizar SOLO las nuevas imágenes
+        # 2️⃣ Cargar productos completos desde GitHub
+        productos_completos = {p["Codigo"]: p for p in gh.cargar_productos_github()}
+        
+        # 3️⃣ Actualizar solo los que obtuvieron imagen
+        imagenes_encontradas = 0
         for prod in resultados:
             codigo = prod.get("Codigo")
             if not codigo:
                 continue
 
-            url_img = prod.get("imagen", {}).get("url_github")
+            imagen = prod.get("imagen", {})
+            url_img = imagen.get("url_github")
+            
             if url_img and codigo in productos_completos:
                 productos_completos[codigo]["imagen"] = {
                     "existe": True,
-                    "url_github": url_img
+                    "url_github": url_img,
+                    "fuente": "duckduckgo"
                 }
+                imagenes_encontradas += 1
 
-        # 4️⃣ Guardar todos
+        # 4️⃣ Guardar todos los productos actualizados
         productos_actualizados = list(productos_completos.values())
         gh.guardar_productos_github(productos_actualizados)
         productos_api = productos_actualizados
         
-        print(f"✅ Imágenes actualizadas y guardadas\n")
+        print(f"\n✅ LOTE COMPLETADO")
+        print(f"   Imágenes encontradas: {imagenes_encontradas}/{len(productos_lote)}")
+        print(f"   Guardado en GitHub: ✓\n")
 
     except Exception as e:
-        print(f"❌ Error: {e}\n")
+        print(f"❌ Error en procesamiento: {e}")
+        print(traceback.format_exc())
 
 @app.get("/api/productos/progreso-imagenes")
 async def progreso_imagenes():
