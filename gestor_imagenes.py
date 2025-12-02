@@ -120,24 +120,29 @@ class GestorImagenesProductos:
         if codigo in self.cache:
             cached = self.cache[codigo]
             return {
-                "codigo": codigo,
-                "nombre": nombre,
-                "descripcion": descripcion,
-                "url_github": cached.get("url_github"),
-                "existe": bool(cached.get("url_github")),
-                "fuente": "cache"
+                "Codigo": codigo,  # ✅ Cambio: mayúscula
+                "Nombre": nombre,   # ✅ Cambio: mayúscula
+                "Descripcion": descripcion,  # ✅ Cambio: mayúscula
+                "imagen": {  # ✅ Estructura correcta
+                    "url_github": cached.get("url_github"),
+                    "existe": bool(cached.get("url_github")),
+                    "fuente": "cache"
+                }
             }
 
-        termino = (descripcion or nombre).strip()
+        # ✅ USAR NOMBRE si no hay Descripcion
+        termino = (descripcion or nombre or "").strip()
 
         if not termino:
             return {
-                "codigo": codigo,
-                "nombre": nombre,
-                "descripcion": descripcion,
-                "url_github": None,
-                "existe": False,
-                "fuente": "sin_descripcion"
+                "Codigo": codigo,
+                "Nombre": nombre,
+                "Descripcion": descripcion,
+                "imagen": {
+                    "url_github": None,
+                    "existe": False,
+                    "fuente": "sin_descripcion"
+                }
             }
 
         # 2) Buscar imagen gratis (DDG)
@@ -159,12 +164,14 @@ class GestorImagenesProductos:
             self._guardar_cache()
 
         return {
-            "codigo": codigo,
-            "nombre": nombre,
-            "descripcion": descripcion,
-            "url_github": url_img,
-            "existe": bool(url_img),
-            "fuente": "duckduckgo" if url_img else "no_encontrada"
+            "Codigo": codigo,
+            "Nombre": nombre,
+            "Descripcion": descripcion,
+            "imagen": {
+                "url_github": url_img,
+                "existe": bool(url_img),
+                "fuente": "duckduckgo" if url_img else "no_encontrada"
+            }
         }
 
     # ------------------------------------------------------------------
@@ -199,7 +206,7 @@ class GestorImagenesProductos:
                         return await self.procesar_producto(
                             prod.get("Codigo"),
                             prod.get("Nombre"),
-                            prod.get("Descripcion"),
+                            prod.get("Descripcion", prod.get("Nombre")),  # ✅ Usar Nombre si no hay Descripcion
                             session
                         )
 
@@ -213,7 +220,13 @@ class GestorImagenesProductos:
                 self.progreso["ultimo_lote"] = lote_num
                 self._guardar_progreso()
 
-                logger.info(f"   ✔ Lote {lote_num} completado. Imágenes: {sum(r['existe'] for r in lote_result)}")
+                # ✅ Contar imágenes encontradas correctamente
+                imagenes_encontradas = sum(
+                    1 for r in lote_result 
+                    if r.get('imagen', {}).get('existe')
+                )
+                
+                logger.info(f"   ✔ Lote {lote_num} completado. Imágenes: {imagenes_encontradas}/{len(lote)}")
 
                 if (i + productos_por_lote) < total:
                     logger.info(f"   ⏸️ Pausa {pausa_entre_lotes} segundos…")
