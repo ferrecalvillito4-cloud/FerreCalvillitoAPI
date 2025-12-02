@@ -6,7 +6,225 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Progreso Imágenes</title>
     <style>
-        /* --- estilos sin cambiar --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .estado {
+            text-align: center;
+            font-size: 64px;
+            margin: 20px 0;
+        }
+        
+        .mensaje {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 20px;
+            min-height: 50px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .controls-full {
+            grid-column: 1 / -1;
+        }
+        
+        .btn {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-info {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-container {
+            background: #f0f0f0;
+            border-radius: 15px;
+            height: 40px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card .label {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-card .value {
+            color: #333;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .debug-panel {
+            background: #f8f9fa;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .debug-panel h3 {
+            color: #3b82f6;
+            margin-bottom: 15px;
+        }
+        
+        .debug-panel pre {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        .timestamp {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        
+        .error,
+        .success,
+        .info {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
     </style>
 </head>
 
@@ -70,9 +288,6 @@
         let errorCount = 0;
         let procesando = false;
 
-        /* ===============================
-           🔍 DEBUG (ruta corregida)
-        ================================ */
         async function verDebug() {
             try {
                 const response = await fetch('/api/productos/progreso-imagenes-detallado');
@@ -85,21 +300,22 @@
                 panel.style.display = 'block';
 
                 const infoEl = document.getElementById('info');
-                infoEl.textContent = `📊 Procesados: ${data.procesados} / ${data.total}`;
+                infoEl.textContent = `📊 Candidatos para procesar: ${data.candidatos_procesar}`;
                 infoEl.style.display = 'block';
 
-                setTimeout(() => infoEl.style.display = 'none', 5000);
-
+                setTimeout(() => {
+                    infoEl.style.display = 'none';
+                }, 5000);
             } catch (error) {
                 console.error('Error en debug:', error);
             }
         }
 
-        /* ===============================
-           🚀 FORZAR PROCESO (ruta corregida)
-        ================================ */
         async function forzarProceso() {
             try {
+                document.getElementById('success').style.display = 'none';
+                document.getElementById('error').style.display = 'none';
+
                 const infoEl = document.getElementById('info');
                 infoEl.textContent = '🚀 Forzando proceso...';
                 infoEl.style.display = 'block';
@@ -111,17 +327,22 @@
                 const data = await response.json();
 
                 if (data.ok) {
-                    document.getElementById('success').textContent = `✅ ${data.mensaje}`;
-                    document.getElementById('success').style.display = 'block';
-                    procesando = true;
+                    const successEl = document.getElementById('success');
+                    successEl.textContent = `✅ ${data.mensaje}`;
+                    successEl.style.display = 'block';
+
                     document.getElementById('btn-pausar').disabled = false;
+                    procesando = true;
                 } else {
-                    document.getElementById('error').textContent = `❌ ${data.error}`;
-                    document.getElementById('error').style.display = 'block';
+                    const errorEl = document.getElementById('error');
+                    errorEl.textContent = `❌ ${data.error}`;
+                    if (data.debug) {
+                        errorEl.textContent += `\n\nDebug: ${JSON.stringify(data.debug, null, 2)}`;
+                    }
+                    errorEl.style.display = 'block';
                 }
 
                 infoEl.style.display = 'none';
-
             } catch (error) {
                 const errorEl = document.getElementById('error');
                 errorEl.textContent = `❌ Error: ${error.message}`;
@@ -129,12 +350,11 @@
             }
         }
 
-        /* ===============================
-           ▶️ INICIAR (ruta corregida)
-        ================================ */
         async function iniciarProceso() {
             try {
                 document.getElementById('btn-iniciar').disabled = true;
+                document.getElementById('success').style.display = 'none';
+                document.getElementById('error').style.display = 'none';
 
                 const response = await fetch('/api/productos/iniciar-proceso-imagenes', {
                     method: 'POST'
@@ -143,26 +363,26 @@
                 const data = await response.json();
 
                 if (data.ok) {
-                    document.getElementById('success').textContent = `✅ ${data.mensaje}`;
-                    document.getElementById('success').style.display = 'block';
-                    procesando = true;
+                    const successEl = document.getElementById('success');
+                    successEl.textContent = `✅ ${data.mensaje}`;
+                    successEl.style.display = 'block';
+
                     document.getElementById('btn-pausar').disabled = false;
+                    procesando = true;
                 } else {
-                    document.getElementById('error').textContent = `❌ ${data.error}`;
-                    document.getElementById('error').style.display = 'block';
+                    const errorEl = document.getElementById('error');
+                    errorEl.textContent = `❌ ${data.error || 'Error desconocido'}`;
+                    errorEl.style.display = 'block';
                     document.getElementById('btn-iniciar').disabled = false;
                 }
-
             } catch (error) {
-                document.getElementById('error').textContent = `❌ Error: ${error.message}`;
-                document.getElementById('error').style.display = 'block';
+                const errorEl = document.getElementById('error');
+                errorEl.textContent = `❌ Error: ${error.message}`;
+                errorEl.style.display = 'block';
                 document.getElementById('btn-iniciar').disabled = false;
             }
         }
 
-        /* ===============================
-           ⏸️ PAUSAR (ruta corregida)
-        ================================ */
         async function pausarProceso() {
             try {
                 const response = await fetch('/api/productos/pausar-proceso-imagenes', {
@@ -172,34 +392,83 @@
                 const data = await response.json();
 
                 if (data.ok) {
-                    document.getElementById('success').textContent = `⏸️ ${data.mensaje}`;
-                    document.getElementById('success').style.display = 'block';
+                    const successEl = document.getElementById('success');
+                    successEl.textContent = `⏸️ ${data.mensaje}`;
+                    successEl.style.display = 'block';
 
-                    procesando = false;
                     document.getElementById('btn-iniciar').disabled = false;
                     document.getElementById('btn-pausar').disabled = true;
+                    procesando = false;
                 }
-
             } catch (error) {
                 console.error('Error al pausar:', error);
             }
         }
 
-        /* ===============================
-           📊 PROGRESO (ruta corregida)
-        ================================ */
         async function actualizarProgreso() {
             try {
                 const response = await fetch('/api/productos/progreso-imagenes');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
                 const data = await response.json();
 
-                /* ... todo igual, solo ruta corregida ... */
+                document.getElementById('error').style.display = 'none';
+                errorCount = 0;
+
+                const estadoEl = document.getElementById('estado');
+                estadoEl.textContent = data.estado.split(' ')[0];
+
+                if (data.estado.includes('Procesando')) {
+                    estadoEl.classList.add('loading');
+                    procesando = true;
+                    document.getElementById('btn-iniciar').disabled = true;
+                    document.getElementById('btn-pausar').disabled = false;
+                } else {
+                    estadoEl.classList.remove('loading');
+                    if (data.estado.includes('Completado')) {
+                        procesando = false;
+                        document.getElementById('btn-iniciar').disabled = true;
+                        document.getElementById('btn-pausar').disabled = true;
+                    } else {
+                        document.getElementById('btn-iniciar').disabled = false;
+                        document.getElementById('btn-pausar').disabled = true;
+                    }
+                }
+
+                document.getElementById('mensaje').textContent = data.mensaje;
+
+                const porcentaje = data.progreso.porcentaje_completado || 0;
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = porcentaje + '%';
+                progressBar.textContent = porcentaje.toFixed(1) + '%';
+
+                if (data.color) {
+                    progressBar.style.background = data.color;
+                }
+
+                document.getElementById('total').textContent =
+                    (data.progreso.total_productos || 0).toLocaleString();
+                document.getElementById('con-imagen').textContent =
+                    (data.progreso.con_imagen || 0).toLocaleString();
+                document.getElementById('sin-imagen').textContent =
+                    (data.progreso.sin_imagen || 0).toLocaleString();
+                document.getElementById('tiempo').textContent =
+                    data.proceso.tiempo_estimado || '-';
+
+                const fecha = new Date(data.timestamp);
+                document.getElementById('timestamp').textContent =
+                    `Última actualización: ${fecha.toLocaleTimeString('es-MX')}`;
 
             } catch (error) {
+                console.error('Error:', error);
                 errorCount++;
-                document.getElementById('error').textContent =
-                    `❌ Error de conexión (${errorCount} intentos)`;
-                document.getElementById('error').style.display = 'block';
+
+                const errorEl = document.getElementById('error');
+                errorEl.textContent = `❌ Error de conexión (${errorCount} intentos)`;
+                errorEl.style.display = 'block';
             }
         }
 
