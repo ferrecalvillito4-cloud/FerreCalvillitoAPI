@@ -492,22 +492,32 @@ async def procesar_imagenes_background(productos_lote):
         print("❌ Gestor no disponible")
         return
 
-    print(f"\n🖼️ PROCESANDO {len(productos_lote)} IMÁGENES...")
+    print(f"\n{'='*70}")
+    print(f"🖼️ INICIANDO PROCESAMIENTO EN SEGUNDO PLANO")
+    print(f"   Productos en lote: {len(productos_lote)}")
+    print(f"{'='*70}\n")
 
     try:
-        # 1️⃣ Procesar el lote (pasando Nombre como descripción)
+        # 1️⃣ Procesar el lote
+        print("🔄 Llamando a gestor_imagenes.procesar_lote_productos()...")
         resultados = await gestor_imagenes.procesar_lote_productos(
             productos_lote,
             max_concurrentes=3,
             productos_por_lote=50,
             pausa_entre_lotes=120
         )
+        
+        print(f"\n✅ Procesamiento completado. Resultados: {len(resultados)}")
 
         # 2️⃣ Cargar productos completos desde GitHub
+        print("📥 Cargando productos desde GitHub...")
         productos_completos = {p["Codigo"]: p for p in gh.cargar_productos_github()}
+        print(f"   Total productos en GitHub: {len(productos_completos)}")
         
         # 3️⃣ Actualizar solo los que obtuvieron imagen
         imagenes_encontradas = 0
+        actualizados = []
+        
         for prod in resultados:
             codigo = prod.get("Codigo")
             if not codigo:
@@ -523,19 +533,35 @@ async def procesar_imagenes_background(productos_lote):
                     "fuente": "duckduckgo"
                 }
                 imagenes_encontradas += 1
+                actualizados.append(codigo)
+        
+        print(f"\n📊 ESTADÍSTICAS:")
+        print(f"   Procesados: {len(resultados)}")
+        print(f"   Imágenes encontradas: {imagenes_encontradas}")
+        print(f"   Productos actualizados: {actualizados[:5]}..." if len(actualizados) > 5 else f"   Productos actualizados: {actualizados}")
 
         # 4️⃣ Guardar todos los productos actualizados
-        productos_actualizados = list(productos_completos.values())
-        gh.guardar_productos_github(productos_actualizados)
-        productos_api = productos_actualizados
+        if imagenes_encontradas > 0:
+            print("\n💾 Guardando en GitHub...")
+            productos_actualizados = list(productos_completos.values())
+            gh.guardar_productos_github(productos_actualizados)
+            productos_api = productos_actualizados
+            print("   ✅ Guardado exitoso")
+        else:
+            print("\n⚠️ No se encontraron imágenes nuevas, no se guarda")
         
-        print(f"\n✅ LOTE COMPLETADO")
-        print(f"   Imágenes encontradas: {imagenes_encontradas}/{len(productos_lote)}")
-        print(f"   Guardado en GitHub: ✓\n")
+        print(f"\n{'='*70}")
+        print("✅ PROCESAMIENTO EN SEGUNDO PLANO FINALIZADO")
+        print(f"   Imágenes nuevas: {imagenes_encontradas}/{len(productos_lote)}")
+        print(f"{'='*70}\n")
 
     except Exception as e:
-        print(f"❌ Error en procesamiento: {e}")
+        print(f"\n{'='*70}")
+        print(f"❌ ERROR EN PROCESAMIENTO EN SEGUNDO PLANO")
+        print(f"   Error: {e}")
+        print(f"   Traceback:")
         print(traceback.format_exc())
+        print(f"{'='*70}\n")
 
 @app.get("/api/productos/progreso-imagenes")
 async def progreso_imagenes():

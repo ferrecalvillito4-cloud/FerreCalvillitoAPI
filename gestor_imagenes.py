@@ -118,6 +118,8 @@ class GestorImagenesProductos:
         
         total = len(productos)
         resultados = []
+        
+        logger.info(f"\n🚀 INICIANDO PROCESAMIENTO DE {total} PRODUCTOS")
 
         async with aiohttp.ClientSession() as session:
             for i in range(0, total, productos_por_lote):
@@ -133,15 +135,26 @@ class GestorImagenesProductos:
 
                 async def procesar_con_limite(prod):
                     async with semaforo:
-                        return await self.procesar_producto(
-                            prod.get("Codigo", ""),
-                            prod.get("Nombre", ""),  # ✅ Solo usa Nombre
-                            "",  # Descripcion vacío (no existe en tus productos)
-                            session
-                        )
+                        try:
+                            resultado = await self.procesar_producto(
+                                prod.get("Codigo", ""),
+                                prod.get("Nombre", ""),
+                                "",
+                                session
+                            )
+                            return resultado
+                        except Exception as e:
+                            logger.error(f"❌ Error procesando {prod.get('Codigo')}: {e}")
+                            return {
+                                "Codigo": prod.get("Codigo"),
+                                "imagen": {"existe": False, "url_github": None}
+                            }
 
                 # Procesar lote
+                logger.info(f"🔄 Creando {len(lote)} tareas...")
                 tareas = [procesar_con_limite(p) for p in lote]
+                
+                logger.info(f"⏳ Esperando resultados...")
                 lote_result = await asyncio.gather(*tareas, return_exceptions=True)
                 
                 # Filtrar errores
@@ -152,18 +165,19 @@ class GestorImagenesProductos:
                 encontradas = sum(1 for r in lote_result if r.get('imagen', {}).get('existe'))
                 
                 logger.info(f"\n✅ Lote {lote_num} completado")
-                logger.info(f"   Imágenes: {encontradas}/{len(lote)}")
-                logger.info(f"   Total: {len(resultados)}/{total}")
+                logger.info(f"   Procesados: {len(lote_result)}/{len(lote)}")
+                logger.info(f"   Imágenes encontradas: {encontradas}")
+                logger.info(f"   Total acumulado: {len(resultados)}/{total}")
 
                 # Pausa entre lotes
                 if (i + productos_por_lote) < total:
-                    logger.info(f"\n⏸️ Pausa de {pausa_entre_lotes}s...")
+                    logger.info(f"\n⏸️ Pausa de {pausa_entre_lotes}s antes del siguiente lote...")
                     await asyncio.sleep(pausa_entre_lotes)
 
         logger.info(f"\n{'='*60}")
         logger.info("🎉 PROCESAMIENTO COMPLETADO")
-        logger.info(f"   Total: {len(resultados)}")
-        logger.info(f"   Encontradas: {sum(1 for r in resultados if r.get('imagen', {}).get('existe'))}")
+        logger.info(f"   Total procesados: {len(resultados)}")
+        logger.info(f"   Imágenes encontradas: {sum(1 for r in resultados if r.get('imagen', {}).get('existe'))}")
         logger.info(f"{'='*60}\n")
         
         return resultados
