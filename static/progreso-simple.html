@@ -2,478 +2,585 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Progreso Imágenes</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Progreso Imágenes — Panel</title>
     <style>
+         :root {
+            --bg1: #667eea;
+            --bg2: #764ba2;
+            --card-bg: #ffffff;
+            --muted: #666;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass: rgba(255, 255, 255, 0.85);
+        }
+        
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+        
+        html,
+        body {
+            height: 100%
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
             display: flex;
-            justify-content: center;
             align-items: center;
-            padding: 20px;
+            justify-content: center;
+            padding: 28px;
+            min-height: 100vh;
+        }
+        
+        .layout {
+            width: 100%;
+            max-width: 980px;
+            border-radius: 20px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 250, 0.98));
+            overflow: hidden;
+        }
+        
+        header {
+            padding: 22px 32px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.35));
+        }
+        
+        header h1 {
+            font-size: 20px;
+            color: var(--bg1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        header .subtitle {
+            color: var(--muted);
+            font-size: 13px;
+            margin-left: 6px;
+        }
+        
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 22px;
+            padding: 26px;
         }
         
         .card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 700px;
-            width: 100%;
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 6px 18px rgba(18, 18, 18, 0.04);
         }
         
-        h1 {
-            text-align: center;
-            color: #667eea;
-            margin-bottom: 30px;
-            font-size: 28px;
+        .top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
         
         .estado {
+            font-size: 60px;
             text-align: center;
-            font-size: 64px;
-            margin: 20px 0;
+            color: var(--bg1);
+            min-width: 120px;
         }
         
         .mensaje {
-            text-align: center;
-            font-size: 18px;
-            color: #666;
-            margin-bottom: 20px;
-            min-height: 50px;
+            color: var(--muted);
+            font-size: 15px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .controls {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
-            margin: 20px 0;
-        }
-        
-        .controls-full {
-            grid-column: 1 / -1;
+            margin-top: 14px;
         }
         
         .btn {
-            padding: 15px;
-            border: none;
+            padding: 12px;
             border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
+            border: none;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+            transition: opacity 0.2s;
         }
         
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--bg1), var(--bg2));
+            color: #fff
         }
         
         .btn-secondary {
-            background: #f59e0b;
-            color: white;
+            background: linear-gradient(90deg, var(--warning), #d97706);
+            color: #fff
         }
         
         .btn-info {
             background: #3b82f6;
-            color: white;
+            color: #fff
         }
         
         .btn-danger {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+            background: linear-gradient(90deg, var(--danger), #dc2626);
+            color: #fff
         }
         
         .progress-container {
-            background: #f0f0f0;
-            border-radius: 15px;
-            height: 40px;
+            margin-top: 18px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            height: 44px;
             overflow: hidden;
-            margin: 20px 0;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
         }
         
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.5s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
+            color: #fff;
+            font-weight: 700;
+            transition: width 0.6s ease;
+            background: linear-gradient(90deg, var(--bg1), var(--bg2));
         }
         
         .stats {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 30px 0;
-        }
-        
-        .stat-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            transition: transform 0.2s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .stat-card .label {
-            color: #666;
-            font-size: 13px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .stat-card .value {
-            color: #333;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        
-        .debug-panel {
-            background: #f8f9fa;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            display: none;
-        }
-        
-        .debug-panel h3 {
-            color: #3b82f6;
-            margin-bottom: 15px;
-        }
-        
-        .debug-panel pre {
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            font-size: 12px;
-        }
-        
-        .timestamp {
-            text-align: center;
-            color: #999;
-            font-size: 12px;
+            gap: 12px;
             margin-top: 20px;
         }
         
-        .error,
-        .success,
-        .info {
-            padding: 15px;
-            border-radius: 8px;
+        .stat-card {
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: 10px;
             text-align: center;
-            margin: 20px 0;
+            transition: transform .12s ease;
         }
         
-        .error {
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.05)
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px
+        }
+        
+        .stat-card .value {
+            font-size: 22px;
+            color: #111;
+            font-weight: 800;
+            margin-top: 6px
+        }
+        
+        .timestamp {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 14px
+        }
+        
+        aside.right {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        
+        .panel {
+            padding: 16px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), #fff);
+            box-shadow: 0 6px 20px rgba(2, 6, 23, 0.03);
+        }
+        
+        .panel h3 {
+            font-size: 14px;
+            color: #334155;
+            margin-bottom: 8px;
+        }
+        
+        .log {
+            max-height: 240px;
+            overflow: auto;
+            background: #0b1221;
+            color: #9ff1b0;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: "Courier New", monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        
+        .debug-panel {
+            display: none
+        }
+        
+        .debug-panel pre {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            max-height: 220px;
+            overflow: auto;
+            font-size: 12px;
+        }
+        
+        .small {
+            color: var(--muted);
+            font-size: 13px;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+        }
+        
+        .alert-error {
             background: #fee;
-            color: #c33;
+            color: #c00;
+            border: 1px solid #fcc;
         }
         
-        .success {
-            background: #d4edda;
-            color: #155724;
+        .alert-success {
+            background: #efe;
+            color: #060;
+            border: 1px solid #cfc;
         }
         
-        .info {
-            background: #e3f2fd;
-            color: #1565c0;
+        .alert-info {
+            background: #eef;
+            color: #006;
+            border: 1px solid #ccf;
         }
         
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
+        footer {
+            padding: 14px 26px;
+            border-top: 1px solid rgba(0, 0, 0, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.25));
+        }
+        
+        .badge {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: var(--bg1);
+            font-weight: 700;
+            font-size: 13px;
+        }
+        
+        @media (max-width:900px) {
+            .main {
+                grid-template-columns: 1fr
             }
-            50% {
-                opacity: 0.5;
+            aside.right {
+                order: 2
             }
-        }
-        
-        .loading {
-            animation: pulse 1.5s infinite;
         }
     </style>
 </head>
 
 <body>
-    <div class="card">
-        <h1>🖼️ Progreso de Imágenes</h1>
+    <div class="layout" role="main">
+        <header>
+            <h1>🖼️ Progreso de Imágenes <span class="subtitle">— Gestor FerreCalvillito</span></h1>
+            <div style="flex:1"></div>
+            <div class="small">Estado: <span class="badge" id="badge-estado">Conectando</span></div>
+        </header>
 
-        <div id="estado" class="estado loading">⏳</div>
-        <div id="mensaje" class="mensaje">Conectando con el servidor...</div>
+        <div class="main">
+            <section class="card">
+                <div class="top-row">
+                    <div style="display:flex;gap:18px;align-items:center">
+                        <div id="estado" class="estado">⏳</div>
+                        <div style="min-width:260px">
+                            <div id="mensaje" class="mensaje">Conectando con el servidor...</div>
+                            <div class="controls">
+                                <button id="btn-procesar" class="btn btn-primary" onclick="procesarImagenes()">▶️ Procesar</button>
+                                <button id="btn-debug" class="btn btn-info" onclick="verDebug()">🔍 Debug</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="controls">
-            <button id="btn-iniciar" class="btn btn-primary" onclick="iniciarProceso()">
-                ▶️ Iniciar
-            </button>
-            <button id="btn-pausar" class="btn btn-secondary" onclick="pausarProceso()" disabled>
-                ⏸️ Pausar
-            </button>
-            <button class="btn btn-info" onclick="verDebug()">
-                🔍 Debug
-            </button>
-            <button class="btn btn-danger" onclick="forzarProceso()">
-                🚀 Forzar
-            </button>
+                <div class="progress-container">
+                    <div id="progress-bar" class="progress-bar" style="width:0%">0%</div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="label">Total Productos</div>
+                        <div id="total" class="value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Con Imagen</div>
+                        <div id="con-imagen" class="value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Sin Imagen</div>
+                        <div id="sin-imagen" class="value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Tiempo Estimado</div>
+                        <div id="tiempo" class="value" style="font-size:18px">-</div>
+                    </div>
+                </div>
+
+                <div class="timestamp" id="timestamp">Última actualización: -</div>
+
+                <div id="error" class="alert alert-error"></div>
+                <div id="success" class="alert alert-success"></div>
+                <div id="info" class="alert alert-info"></div>
+            </section>
+
+            <aside class="right">
+                <div class="panel">
+                    <h3>Actividad</h3>
+                    <div class="small">Últimos eventos del gestor</div>
+                    <div style="height:12px"></div>
+                    <div id="log" class="log">Iniciando panel...\n</div>
+                </div>
+
+                <div class="panel debug-panel" id="debug-panel">
+                    <h3>Debug (raw)</h3>
+                    <pre id="debug-content">—</pre>
+                </div>
+
+                <div class="panel">
+                    <h3>Acciones rápidas</h3>
+                    <p class="small">Usa los botones para controlar el procesador.</p>
+                    <div style="display:grid;gap:8px;margin-top:8px">
+                        <button class="btn btn-primary" onclick="window.location.reload()">🔄 Recargar</button>
+                        <button class="btn btn-info" onclick="copiarEstado()">📋 Copiar estado</button>
+                    </div>
+                </div>
+            </aside>
         </div>
 
-        <div class="progress-container">
-            <div id="progress-bar" class="progress-bar" style="width: 0%">0%</div>
-        </div>
-
-        <div class="stats">
-            <div class="stat-card">
-                <div class="label">Total Productos</div>
-                <div class="value" id="total">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Con Imagen</div>
-                <div class="value" id="con-imagen">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Sin Imagen</div>
-                <div class="value" id="sin-imagen">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Tiempo Estimado</div>
-                <div class="value" id="tiempo" style="font-size: 20px;">-</div>
-            </div>
-        </div>
-
-        <div id="debug-panel" class="debug-panel">
-            <h3>🔍 Información de Debug</h3>
-            <pre id="debug-content"></pre>
-        </div>
-
-        <div id="timestamp" class="timestamp"></div>
-        <div id="error" class="error" style="display: none;"></div>
-        <div id="success" class="success" style="display: none;"></div>
-        <div id="info" class="info" style="display: none;"></div>
+        <footer>
+            <div class="small">Built: Panel v2 — FerreCalvillito</div>
+            <div class="small">API: <strong>/api/productos/</strong></div>
+        </footer>
     </div>
 
     <script>
         let errorCount = 0;
-        let procesando = false;
+        const logEl = document.getElementById('log');
+        const debugPanel = document.getElementById('debug-panel');
+        const debugContent = document.getElementById('debug-content');
+
+        function pushLog(line) {
+            const ts = new Date().toLocaleTimeString();
+            logEl.textContent = `${ts} — ${line}\n` + logEl.textContent;
+            if (logEl.textContent.length > 20000) {
+                logEl.textContent = logEl.textContent.slice(0, 20000);
+            }
+        }
+
+        function showAlert(type, msg) {
+            const el = document.getElementById(type);
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 6000);
+        }
+
+        function showError(msg) {
+            showAlert('error', msg);
+        }
+
+        function showSuccess(msg) {
+            showAlert('success', msg);
+        }
+
+        function showInfo(msg) {
+            showAlert('info', msg);
+        }
+
+        async function callApi(path, opts = {}) {
+            try {
+                const res = await fetch(path, {
+                    ...opts,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...opts.headers
+                    }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+
+                return await res.json();
+            } catch (err) {
+                pushLog(`❌ API Error: ${err.message}`);
+                throw err;
+            }
+        }
 
         async function verDebug() {
             try {
-                const response = await fetch('/api/productos/progreso-imagenes-detallado');
-                const data = await response.json();
+                const data = await callApi('/producto');
+                debugPanel.style.display = 'block';
 
-                const panel = document.getElementById('debug-panel');
-                const content = document.getElementById('debug-content');
+                const productos = Array.isArray(data) ? data : [];
+                const resumen = {
+                    total: productos.length,
+                    con_imagen: productos.filter(p => p.imagen && p.imagen.url_github).length,
+                    primeros_3: productos.slice(0, 3)
+                };
 
-                content.textContent = JSON.stringify(data, null, 2);
-                panel.style.display = 'block';
-
-                const infoEl = document.getElementById('info');
-                infoEl.textContent = `📊 Candidatos para procesar: ${data.candidatos_procesar}`;
-                infoEl.style.display = 'block';
-
-                setTimeout(() => {
-                    infoEl.style.display = 'none';
-                }, 5000);
-            } catch (error) {
-                console.error('Error en debug:', error);
+                debugContent.textContent = JSON.stringify(resumen, null, 2);
+                pushLog('Debug cargado');
+            } catch (err) {
+                showError('No se pudo cargar debug');
             }
         }
 
-        async function forzarProceso() {
+        async function procesarImagenes() {
             try {
-                document.getElementById('success').style.display = 'none';
-                document.getElementById('error').style.display = 'none';
+                document.getElementById('btn-procesar').disabled = true;
+                showInfo('⏳ Procesando imágenes...');
+                pushLog('Iniciando procesamiento manual...');
 
-                const infoEl = document.getElementById('info');
-                infoEl.textContent = '🚀 Forzando proceso...';
-                infoEl.style.display = 'block';
-
-                const response = await fetch('/api/productos/forzar-proceso-imagenes', {
+                const data = await callApi('/api/productos/procesar-imagenes-manual', {
                     method: 'POST'
                 });
 
-                const data = await response.json();
-
                 if (data.ok) {
-                    const successEl = document.getElementById('success');
-                    successEl.textContent = `✅ ${data.mensaje}`;
-                    successEl.style.display = 'block';
-
-                    document.getElementById('btn-pausar').disabled = false;
-                    procesando = true;
+                    showSuccess(data.mensaje || 'Procesamiento iniciado');
+                    pushLog(`✅ ${data.mensaje}`);
                 } else {
-                    const errorEl = document.getElementById('error');
-                    errorEl.textContent = `❌ ${data.error}`;
-                    if (data.debug) {
-                        errorEl.textContent += `\n\nDebug: ${JSON.stringify(data.debug, null, 2)}`;
-                    }
-                    errorEl.style.display = 'block';
+                    showError(data.error || 'Error al procesar');
+                    pushLog(`❌ Error: ${data.error}`);
+                    document.getElementById('btn-procesar').disabled = false;
                 }
-
-                infoEl.style.display = 'none';
-            } catch (error) {
-                const errorEl = document.getElementById('error');
-                errorEl.textContent = `❌ Error: ${error.message}`;
-                errorEl.style.display = 'block';
+            } catch (err) {
+                showError('Error al procesar imágenes');
+                document.getElementById('btn-procesar').disabled = false;
             }
         }
 
-        async function iniciarProceso() {
-            try {
-                document.getElementById('btn-iniciar').disabled = true;
-                document.getElementById('success').style.display = 'none';
-                document.getElementById('error').style.display = 'none';
+        function copiarEstado() {
+            const estado = {
+                total: document.getElementById('total').textContent,
+                con_imagen: document.getElementById('con-imagen').textContent,
+                sin_imagen: document.getElementById('sin-imagen').textContent,
+                porcentaje: document.getElementById('progress-bar').textContent,
+                tiempo: document.getElementById('tiempo').textContent
+            };
 
-                const response = await fetch('/api/productos/iniciar-proceso-imagenes', {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.ok) {
-                    const successEl = document.getElementById('success');
-                    successEl.textContent = `✅ ${data.mensaje}`;
-                    successEl.style.display = 'block';
-
-                    document.getElementById('btn-pausar').disabled = false;
-                    procesando = true;
-                } else {
-                    const errorEl = document.getElementById('error');
-                    errorEl.textContent = `❌ ${data.error || 'Error desconocido'}`;
-                    errorEl.style.display = 'block';
-                    document.getElementById('btn-iniciar').disabled = false;
-                }
-            } catch (error) {
-                const errorEl = document.getElementById('error');
-                errorEl.textContent = `❌ Error: ${error.message}`;
-                errorEl.style.display = 'block';
-                document.getElementById('btn-iniciar').disabled = false;
-            }
-        }
-
-        async function pausarProceso() {
-            try {
-                const response = await fetch('/api/productos/pausar-proceso-imagenes', {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.ok) {
-                    const successEl = document.getElementById('success');
-                    successEl.textContent = `⏸️ ${data.mensaje}`;
-                    successEl.style.display = 'block';
-
-                    document.getElementById('btn-iniciar').disabled = false;
-                    document.getElementById('btn-pausar').disabled = true;
-                    procesando = false;
-                }
-            } catch (error) {
-                console.error('Error al pausar:', error);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(JSON.stringify(estado, null, 2))
+                    .then(() => {
+                        pushLog('Estado copiado');
+                        showInfo('✅ Estado copiado al portapapeles');
+                    })
+                    .catch(() => pushLog('No se pudo copiar'));
+            } else {
+                pushLog('Clipboard no disponible');
             }
         }
 
         async function actualizarProgreso() {
             try {
-                const response = await fetch('/api/productos/progreso-imagenes');
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                document.getElementById('error').style.display = 'none';
+                const data = await callApi('/producto');
                 errorCount = 0;
 
-                const estadoEl = document.getElementById('estado');
-                estadoEl.textContent = data.estado.split(' ')[0];
-
-                if (data.estado.includes('Procesando')) {
-                    estadoEl.classList.add('loading');
-                    procesando = true;
-                    document.getElementById('btn-iniciar').disabled = true;
-                    document.getElementById('btn-pausar').disabled = false;
-                } else {
-                    estadoEl.classList.remove('loading');
-                    if (data.estado.includes('Completado')) {
-                        procesando = false;
-                        document.getElementById('btn-iniciar').disabled = true;
-                        document.getElementById('btn-pausar').disabled = true;
-                    } else {
-                        document.getElementById('btn-iniciar').disabled = false;
-                        document.getElementById('btn-pausar').disabled = true;
-                    }
+                if (!Array.isArray(data)) {
+                    throw new Error('Respuesta inválida del servidor');
                 }
 
-                document.getElementById('mensaje').textContent = data.mensaje;
+                const total = data.length;
+                const conImagen = data.filter(p => p.imagen && p.imagen.url_github).length;
+                const sinImagen = total - conImagen;
+                const porcentaje = total > 0 ? ((conImagen / total) * 100).toFixed(1) : 0;
 
-                const porcentaje = data.progreso.porcentaje_completado || 0;
+                // Actualizar UI
+                document.getElementById('estado').textContent = '📊';
+                document.getElementById('mensaje').textContent = `${conImagen} de ${total} productos con imagen`;
+                document.getElementById('badge-estado').textContent = 'Conectado';
+
+                // Barra de progreso
                 const progressBar = document.getElementById('progress-bar');
                 progressBar.style.width = porcentaje + '%';
-                progressBar.textContent = porcentaje.toFixed(1) + '%';
+                progressBar.textContent = porcentaje + '%';
 
-                if (data.color) {
-                    progressBar.style.background = data.color;
+                // Stats
+                document.getElementById('total').textContent = total.toLocaleString();
+                document.getElementById('con-imagen').textContent = conImagen.toLocaleString();
+                document.getElementById('sin-imagen').textContent = sinImagen.toLocaleString();
+
+                // Tiempo estimado
+                if (sinImagen > 0) {
+                    const minutos = Math.ceil((sinImagen / 50) * 2);
+                    document.getElementById('tiempo').textContent =
+                        minutos < 60 ? `${minutos}m` : `${Math.floor(minutos/60)}h ${minutos%60}m`;
+                } else {
+                    document.getElementById('tiempo').textContent = 'Completo';
                 }
 
-                document.getElementById('total').textContent =
-                    (data.progreso.total_productos || 0).toLocaleString();
-                document.getElementById('con-imagen').textContent =
-                    (data.progreso.con_imagen || 0).toLocaleString();
-                document.getElementById('sin-imagen').textContent =
-                    (data.progreso.sin_imagen || 0).toLocaleString();
-                document.getElementById('tiempo').textContent =
-                    data.proceso.tiempo_estimado || '-';
-
-                const fecha = new Date(data.timestamp);
+                // Timestamp
                 document.getElementById('timestamp').textContent =
-                    `Última actualización: ${fecha.toLocaleTimeString('es-MX')}`;
+                    'Última actualización: ' + new Date().toLocaleString('es-MX');
 
-            } catch (error) {
-                console.error('Error:', error);
+                pushLog(`✅ ${conImagen}/${total} (${porcentaje}%)`);
+
+            } catch (err) {
                 errorCount++;
+                document.getElementById('badge-estado').textContent = 'Error';
+                pushLog(`❌ Error de conexión (${errorCount})`);
 
-                const errorEl = document.getElementById('error');
-                errorEl.textContent = `❌ Error de conexión (${errorCount} intentos)`;
-                errorEl.style.display = 'block';
+                if (errorCount === 1) {
+                    showError('Error de conexión con el servidor');
+                }
             }
         }
 
+        // Iniciar
         actualizarProgreso();
-        setInterval(actualizarProgreso, 3000);
+        setInterval(actualizarProgreso, 5000);
+
+        pushLog('Panel iniciado correctamente');
     </script>
 </body>
 
