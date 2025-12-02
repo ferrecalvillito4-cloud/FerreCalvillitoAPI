@@ -1042,3 +1042,115 @@ async def debug_contactos_estado():
         }
     except Exception as e:
         return {"error": str(e)}
+
+# =============================
+# REEMPLAZAR EL ENDPOINT EXISTENTE /api/productos/progreso-imagenes
+# =============================
+
+@app.get("/api/productos/progreso-imagenes")
+async def progreso_imagenes():
+    """Endpoint para ver progreso con estructura correcta para el HTML"""
+    
+    if not gestor_imagenes:
+        return {
+            "error": False,
+            "estado": "❌ Error",
+            "mensaje": "Gestor no inicializado",
+            "color": "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)",
+            "progreso": {
+                "porcentaje_completado": 0,
+                "total_productos": 0,
+                "con_imagen": 0,
+                "sin_imagen": 0
+            },
+            "proceso": {
+                "tiempo_estimado": "N/A"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    try:
+        # Leer progreso desde archivo
+        progreso_file = os.path.join(IMAGENES_DIR, "progreso.json")
+        
+        if os.path.exists(progreso_file):
+            with open(progreso_file, 'r') as f:
+                progreso = json.load(f)
+        else:
+            progreso = {"procesados": 0, "total": 0, "ultimo_lote": 0}
+        
+        # Obtener productos totales
+        productos = gh.cargar_productos_github()
+        total = len(productos)
+        con_imagen = len([p for p in productos if p.get('imagen', {}).get('url_github')])
+        sin_imagen = total - con_imagen
+        
+        procesados = progreso.get("procesados", 0)
+        porcentaje = round((con_imagen / total * 100), 2) if total > 0 else 0
+        
+        # Calcular tiempo estimado
+        if sin_imagen > 0:
+            lotes_restantes = (sin_imagen / 50)
+            minutos_estimados = lotes_restantes * 2
+            
+            if minutos_estimados < 1:
+                tiempo_estimado = "< 1 minuto"
+            elif minutos_estimados < 60:
+                tiempo_estimado = f"{int(minutos_estimados)} minutos"
+            else:
+                horas = int(minutos_estimados / 60)
+                mins = int(minutos_estimados % 60)
+                tiempo_estimado = f"{horas}h {mins}m"
+        else:
+            tiempo_estimado = "Completado"
+        
+        # Estado del proceso
+        if sin_imagen == 0:
+            estado = "✅ Completado"
+            mensaje = "Todas las imágenes han sido procesadas"
+            color = "linear-gradient(90deg, #10b981 0%, #059669 100%)"
+        elif procesados > 0:
+            estado = "⏳ Procesando"
+            mensaje = f"Procesando lote {progreso.get('ultimo_lote', 0)}... ({con_imagen}/{total})"
+            color = "linear-gradient(90deg, #667eea 0%, #764ba2 100%)"
+        else:
+            estado = "⏸️ Pausado"
+            mensaje = "Proceso no iniciado o pausado"
+            color = "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
+        
+        return {
+            "error": False,
+            "estado": estado,
+            "mensaje": mensaje,
+            "color": color,
+            "progreso": {
+                "total_productos": total,
+                "con_imagen": con_imagen,
+                "sin_imagen": sin_imagen,
+                "porcentaje_completado": porcentaje,
+                "procesados_actual": procesados,
+                "ultimo_lote": progreso.get("ultimo_lote", 0)
+            },
+            "proceso": {
+                "tiempo_estimado": tiempo_estimado
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        return {
+            "error": True,
+            "estado": "❌ Error",
+            "mensaje": f"Error: {str(e)}",
+            "color": "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)",
+            "progreso": {
+                "porcentaje_completado": 0,
+                "total_productos": 0,
+                "con_imagen": 0,
+                "sin_imagen": 0
+            },
+            "proceso": {
+                "tiempo_estimado": "N/A"
+            },
+            "timestamp": datetime.now().isoformat()
+        }        
