@@ -592,9 +592,7 @@ async def progreso_imagenes():
             },
             "timestamp": datetime.now().isoformat()
         }
-    
 
-    
     except Exception as e:
         return {
             "error": True,
@@ -611,6 +609,64 @@ async def progreso_imagenes():
             },
             "timestamp": datetime.now().isoformat()
         }
+
+@app.post("/api/productos/iniciar-proceso-imagenes")
+async def iniciar_proceso_imagenes():
+    """Inicia el proceso automático de descarga de imágenes"""
+    
+    if not gestor_imagenes:
+        return {
+            "ok": False,
+            "error": "Gestor de imágenes no inicializado"
+        }
+    
+    # Obtener productos sin imagen
+    productos = gh.cargar_productos_github()
+    productos_sin_imagen = [
+        p for p in productos 
+        if p.get('Descripcion') and p['Descripcion'].strip()
+        and not p.get('imagen', {}).get('url_github')
+    ]
+    
+    if not productos_sin_imagen:
+        return {
+            "ok": True,
+            "mensaje": "No hay productos pendientes",
+            "pendientes": 0
+        }
+    
+    # Iniciar proceso en background
+    asyncio.create_task(procesar_imagenes_background(productos_sin_imagen))
+    
+    return {
+        "ok": True,
+        "mensaje": f"Proceso iniciado para {len(productos_sin_imagen)} productos",
+        "pendientes": len(productos_sin_imagen),
+        "tiempo_estimado": f"{int((len(productos_sin_imagen) / 50) * 2)} minutos aproximadamente"
+    }
+
+
+@app.post("/api/productos/pausar-proceso-imagenes")
+async def pausar_proceso_imagenes():
+    """Detiene el proceso de descarga de imágenes"""
+    
+    # Resetear archivo de progreso
+    progreso_file = os.path.join(IMAGENES_DIR, "progreso.json")
+    
+    if os.path.exists(progreso_file):
+        with open(progreso_file, 'r') as f:
+            progreso = json.load(f)
+        
+        progreso["procesados"] = 0
+        progreso["ultimo_lote"] = 0
+        
+        with open(progreso_file, 'w') as f:
+            json.dump(progreso, f, indent=2)
+    
+    return {
+        "ok": True,
+        "mensaje": "Proceso pausado (nota: las tareas en ejecución terminarán)"
+    }
 
 @app.get("/debug/productos-estado")
 async def debug_productos_estado():
