@@ -668,6 +668,90 @@ async def pausar_proceso_imagenes():
         "mensaje": "Proceso pausado (nota: las tareas en ejecución terminarán)"
     }
 
+@app.get("/api/productos/debug-imagenes")
+async def debug_imagenes():
+    """Debug: Ver qué productos necesitan imágenes"""
+    
+    productos = gh.cargar_productos_github()
+    
+    # Análisis detallado
+    total = len(productos)
+    con_descripcion = [p for p in productos if p.get('Descripcion') and p['Descripcion'].strip()]
+    sin_descripcion = total - len(con_descripcion)
+    
+    con_imagen = [p for p in productos if p.get('imagen', {}).get('url_github')]
+    sin_imagen = [p for p in con_descripcion if not p.get('imagen', {}).get('url_github')]
+    
+    # Ejemplos
+    ejemplos_sin_imagen = []
+    for p in sin_imagen[:5]:  # Primeros 5
+        ejemplos_sin_imagen.append({
+            "codigo": p.get('Codigo'),
+            "nombre": p.get('Nombre'),
+            "descripcion": p.get('Descripcion', '')[:100],
+            "tiene_imagen_obj": 'imagen' in p,
+            "url_actual": p.get('imagen', {}).get('url_github')
+        })
+    
+    return {
+        "total_productos": total,
+        "con_descripcion": len(con_descripcion),
+        "sin_descripcion": sin_descripcion,
+        "con_imagen": len(con_imagen),
+        "sin_imagen": len(sin_imagen),
+        "candidatos_procesar": len(sin_imagen),
+        "ejemplos_sin_imagen": ejemplos_sin_imagen,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/api/productos/forzar-proceso-imagenes")
+async def forzar_proceso_imagenes():
+    """Fuerza el procesamiento ignorando la validación inicial"""
+    
+    if not gestor_imagenes:
+        return {
+            "ok": False,
+            "error": "Gestor de imágenes no inicializado"
+        }
+    
+    # Obtener TODOS los productos con descripción
+    productos = gh.cargar_productos_github()
+    
+    productos_candidatos = []
+    for p in productos:
+        desc = p.get('Descripcion', '').strip()
+        url_actual = p.get('imagen', {}).get('url_github')
+        
+        # Producto tiene descripción Y no tiene URL de imagen
+        if desc and not url_actual:
+            productos_candidatos.append({
+                "Codigo": p.get('Codigo'),
+                "Nombre": p.get('Nombre'),
+                "Descripcion": desc
+            })
+    
+    if not productos_candidatos:
+        return {
+            "ok": False,
+            "error": "No hay productos para procesar",
+            "debug": {
+                "total": len(productos),
+                "con_descripcion": len([p for p in productos if p.get('Descripcion', '').strip()]),
+                "con_imagen": len([p for p in productos if p.get('imagen', {}).get('url_github')])
+            }
+        }
+    
+    # Iniciar proceso
+    asyncio.create_task(procesar_imagenes_background(productos_candidatos))
+    
+    return {
+        "ok": True,
+        "mensaje": f"Proceso forzado para {len(productos_candidatos)} productos",
+        "candidatos": len(productos_candidatos),
+        "tiempo_estimado": f"{int((len(productos_candidatos) / 50) * 2)} minutos aproximadamente"
+    }
+
 @app.get("/debug/productos-estado")
 async def debug_productos_estado():
     """Debug de estado de productos"""
