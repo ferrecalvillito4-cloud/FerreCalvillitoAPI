@@ -508,21 +508,7 @@ async def progreso_imagenes():
     """Endpoint para ver progreso desde cualquier lugar"""
     
     if not gestor_imagenes:
-        return {
-            "error": True,
-            "estado": "❌ Error",
-            "mensaje": "Gestor no inicializado",
-            "progreso": {
-                "porcentaje_completado": 0,
-                "total_productos": 0,
-                "con_imagen": 0,
-                "sin_imagen": 0
-            },
-            "proceso": {
-                "tiempo_estimado": "N/A"
-            },
-            "timestamp": datetime.now().isoformat()
-        }
+        return {"error": "Gestor no inicializado"}
     
     try:
         # Leer progreso desde archivo
@@ -548,15 +534,7 @@ async def progreso_imagenes():
             # 50 productos por lote, 2 min por lote, ~5 segundos por producto
             lotes_restantes = (sin_imagen / 50)
             minutos_estimados = lotes_restantes * 2
-            
-            if minutos_estimados < 1:
-                tiempo_estimado = "< 1 minuto"
-            elif minutos_estimados < 60:
-                tiempo_estimado = f"{int(minutos_estimados)} minutos"
-            else:
-                horas = int(minutos_estimados / 60)
-                mins = int(minutos_estimados % 60)
-                tiempo_estimado = f"{horas}h {mins}m"
+            tiempo_estimado = f"{int(minutos_estimados)} minutos"
         else:
             tiempo_estimado = "Completado"
         
@@ -564,193 +542,31 @@ async def progreso_imagenes():
         if sin_imagen == 0:
             estado = "✅ Completado"
             mensaje = "Todas las imágenes han sido procesadas"
-            color = "linear-gradient(90deg, #10b981 0%, #059669 100%)"
         elif procesados > 0:
             estado = "⏳ Procesando"
-            mensaje = f"Procesando lote {progreso.get('ultimo_lote', 0)}... ({con_imagen}/{total})"
-            color = "linear-gradient(90deg, #667eea 0%, #764ba2 100%)"
+            mensaje = f"Procesando lote {progreso.get('ultimo_lote', 0)}..."
         else:
             estado = "⏸️ Pausado"
             mensaje = "Proceso no iniciado o pausado"
-            color = "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
         
         return {
-            "error": False,
             "estado": estado,
             "mensaje": mensaje,
-            "color": color,
-            "progreso": {
-                "total_productos": total,
-                "con_imagen": con_imagen,
-                "sin_imagen": sin_imagen,
-                "porcentaje_completado": porcentaje,
-                "procesados_actual": procesados,
-                "ultimo_lote": progreso.get("ultimo_lote", 0)
-            },
-            "proceso": {
-                "tiempo_estimado": tiempo_estimado
-            },
+            "total_productos": total,
+            "con_imagen": con_imagen,
+            "sin_imagen": sin_imagen,
+            "porcentaje_completado": porcentaje,
+            "procesados_actual": procesados,
+            "ultimo_lote": progreso.get("ultimo_lote", 0),
+            "tiempo_estimado": tiempo_estimado,
             "timestamp": datetime.now().isoformat()
         }
-
+    
     except Exception as e:
         return {
-            "error": True,
-            "estado": "❌ Error",
-            "mensaje": f"Error al obtener progreso: {str(e)}",
-            "progreso": {
-                "porcentaje_completado": 0,
-                "total_productos": 0,
-                "con_imagen": 0,
-                "sin_imagen": 0
-            },
-            "proceso": {
-                "tiempo_estimado": "N/A"
-            },
+            "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
-
-@app.post("/api/productos/iniciar-proceso-imagenes")
-async def iniciar_proceso_imagenes():
-    """Inicia el proceso automático de descarga de imágenes"""
-    
-    if not gestor_imagenes:
-        return {
-            "ok": False,
-            "error": "Gestor de imágenes no inicializado"
-        }
-    
-    # Obtener productos sin imagen
-    productos = gh.cargar_productos_github()
-    productos_sin_imagen = [
-        p for p in productos 
-        if p.get('Descripcion') and p['Descripcion'].strip()
-        and not p.get('imagen', {}).get('url_github')
-    ]
-    
-    if not productos_sin_imagen:
-        return {
-            "ok": True,
-            "mensaje": "No hay productos pendientes",
-            "pendientes": 0
-        }
-    
-    # Iniciar proceso en background
-    asyncio.create_task(procesar_imagenes_background(productos_sin_imagen))
-    
-    return {
-        "ok": True,
-        "mensaje": f"Proceso iniciado para {len(productos_sin_imagen)} productos",
-        "pendientes": len(productos_sin_imagen),
-        "tiempo_estimado": f"{int((len(productos_sin_imagen) / 50) * 2)} minutos aproximadamente"
-    }
-
-
-@app.post("/api/productos/pausar-proceso-imagenes")
-async def pausar_proceso_imagenes():
-    """Detiene el proceso de descarga de imágenes"""
-    
-    # Resetear archivo de progreso
-    progreso_file = os.path.join(IMAGENES_DIR, "progreso.json")
-    
-    if os.path.exists(progreso_file):
-        with open(progreso_file, 'r') as f:
-            progreso = json.load(f)
-        
-        progreso["procesados"] = 0
-        progreso["ultimo_lote"] = 0
-        
-        with open(progreso_file, 'w') as f:
-            json.dump(progreso, f, indent=2)
-    
-    return {
-        "ok": True,
-        "mensaje": "Proceso pausado (nota: las tareas en ejecución terminarán)"
-    }
-
-@app.get("/api/productos/debug-imagenes")
-async def debug_imagenes():
-    """Debug: Ver qué productos necesitan imágenes"""
-    
-    productos = gh.cargar_productos_github()
-    
-    # Análisis detallado
-    total = len(productos)
-    con_descripcion = [p for p in productos if p.get('Descripcion') and p['Descripcion'].strip()]
-    sin_descripcion = total - len(con_descripcion)
-    
-    con_imagen = [p for p in productos if p.get('imagen', {}).get('url_github')]
-    sin_imagen = [p for p in con_descripcion if not p.get('imagen', {}).get('url_github')]
-    
-    # Ejemplos
-    ejemplos_sin_imagen = []
-    for p in sin_imagen[:5]:  # Primeros 5
-        ejemplos_sin_imagen.append({
-            "codigo": p.get('Codigo'),
-            "nombre": p.get('Nombre'),
-            "descripcion": p.get('Descripcion', '')[:100],
-            "tiene_imagen_obj": 'imagen' in p,
-            "url_actual": p.get('imagen', {}).get('url_github')
-        })
-    
-    return {
-        "total_productos": total,
-        "con_descripcion": len(con_descripcion),
-        "sin_descripcion": sin_descripcion,
-        "con_imagen": len(con_imagen),
-        "sin_imagen": len(sin_imagen),
-        "candidatos_procesar": len(sin_imagen),
-        "ejemplos_sin_imagen": ejemplos_sin_imagen,
-        "timestamp": datetime.now().isoformat()
-    }
-
-
-@app.post("/api/productos/forzar-proceso-imagenes")
-async def forzar_proceso_imagenes():
-    """Fuerza el procesamiento ignorando la validación inicial"""
-    
-    if not gestor_imagenes:
-        return {
-            "ok": False,
-            "error": "Gestor de imágenes no inicializado"
-        }
-    
-    # Obtener TODOS los productos con descripción
-    productos = gh.cargar_productos_github()
-    
-    productos_candidatos = []
-    for p in productos:
-        desc = p.get('Descripcion', '').strip()
-        url_actual = p.get('imagen', {}).get('url_github')
-        
-        # Producto tiene descripción Y no tiene URL de imagen
-        if desc and not url_actual:
-            productos_candidatos.append({
-                "Codigo": p.get('Codigo'),
-                "Nombre": p.get('Nombre'),
-                "Descripcion": desc
-            })
-    
-    if not productos_candidatos:
-        return {
-            "ok": False,
-            "error": "No hay productos para procesar",
-            "debug": {
-                "total": len(productos),
-                "con_descripcion": len([p for p in productos if p.get('Descripcion', '').strip()]),
-                "con_imagen": len([p for p in productos if p.get('imagen', {}).get('url_github')])
-            }
-        }
-    
-    # Iniciar proceso
-    asyncio.create_task(procesar_imagenes_background(productos_candidatos))
-    
-    return {
-        "ok": True,
-        "mensaje": f"Proceso forzado para {len(productos_candidatos)} productos",
-        "candidatos": len(productos_candidatos),
-        "tiempo_estimado": f"{int((len(productos_candidatos) / 50) * 2)} minutos aproximadamente"
-    }
 
 @app.get("/debug/productos-estado")
 async def debug_productos_estado():
