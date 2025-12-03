@@ -11,23 +11,95 @@ logger = logging.getLogger(__name__)
 
 class GestorImagenesProductos:
     """
-    Gestor FUNCIONAL - Pexels API (imágenes REALES, gratis, permite automatización)
+    Gestor CON IA - HuggingFace API para extraer URLs de imágenes automáticamente
     """
     
     def __init__(self, directorio_imagenes: str = None, github_token: str = None, github_repo: str = None):
         self.cache_memoria = {}
-        # Pexels API key - GRATIS, permite automatización
-        # Registrate en https://www.pexels.com/api/
+        self.hf_token = os.getenv("HUGGINGFACE_TOKEN", "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")
         self.pexels_key = os.getenv("PEXELS_API_KEY", "7uKpeg5kqPkJgnpyd4Uq5F6kSj0rt5GJH9RPZLJbqN2i6hfWBfO3IdeZ")
-        logger.info("✅ Gestor inicializado (Pexels API - Imágenes reales + Automatización permitida)")
+        logger.info("✅ Gestor inicializado (HuggingFace IA + Pexels API)")
 
     # -------------------------------------------------------------------------
-    # 🔍 BUSCAR EN PEXELS (IMÁGENES REALES)
+    # 🤖 USAR IA PARA EXTRAER MEJOR BÚSQUEDA
+    # -------------------------------------------------------------------------
+    async def extraer_termino_ia(self, nombre_producto: str, session: aiohttp.ClientSession) -> str:
+        """
+        Usa HuggingFace IA para extraer el mejor término de búsqueda del nombre del producto
+        """
+        try:
+            await asyncio.sleep(random.uniform(0.2, 0.4))
+            
+            headers = {
+                "Authorization": f"Bearer {self.hf_token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Prompt para extraer palabra clave
+            prompt = f"""Dado este nombre de producto de ferretería, extrae UNA SOLA palabra clave en INGLÉS que describe mejor el producto para buscar imágenes.
+
+Producto: {nombre_producto}
+
+Responde SOLO con la palabra, nada más. Ejemplo:
+- "MARTILLO 5LB SURTEK" → hammer
+- "ZAPAPICO 7LB" → pickaxe
+- "CERA LIQUIDA BLANCA" → wax
+- "TUBO PVC 2 PULGADAS" → pipe
+- "CABLE ELECTRICO" → electrical wire
+
+Palabra clave:"""
+            
+            payload = {
+                "inputs": prompt,
+                "parameters": {
+                    "max_length": 50,
+                    "temperature": 0.3
+                }
+            }
+            
+            async with session.post(
+                "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf",
+                headers=headers,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=15)
+            ) as resp:
+                
+                if resp.status == 200:
+                    try:
+                        data = await resp.json()
+                        
+                        if isinstance(data, list) and len(data) > 0:
+                            texto = data[0].get("generated_text", "")
+                            
+                            # Extraer solo la última línea (la respuesta)
+                            lineas = texto.split("\n")
+                            respuesta = lineas[-1].strip().lower()
+                            
+                            # Limpiar
+                            respuesta = respuesta.replace("palabra clave:", "").replace(":", "").strip()
+                            
+                            if respuesta and len(respuesta) > 1:
+                                logger.debug(f"   IA extrajo: '{respuesta}'")
+                                return respuesta
+                    except Exception as e:
+                        logger.debug(f"Error parseando IA: {str(e)[:80]}")
+                        return None
+                
+                return None
+                    
+        except asyncio.TimeoutError:
+            logger.debug("Timeout HuggingFace IA")
+            return None
+        except Exception as e:
+            logger.debug(f"Error HuggingFace: {str(e)[:80]}")
+            return None
+
+    # -------------------------------------------------------------------------
+    # 🔍 BUSCAR EN PEXELS
     # -------------------------------------------------------------------------
     async def buscar_imagen_pexels(self, termino: str, session: aiohttp.ClientSession) -> str:
         """
-        Busca imágenes REALES en Pexels API
-        Pexels permite automatización, es gratis y tiene alto límite
+        Busca imágenes en Pexels con término extraído por IA
         """
         try:
             await asyncio.sleep(random.uniform(0.2, 0.5))
@@ -40,7 +112,8 @@ class GestorImagenesProductos:
             params = {
                 "query": termino,
                 "per_page": 1,
-                "page": 1
+                "orientation": "portrait",
+                "size": "medium"
             }
             
             async with session.get(
@@ -55,29 +128,20 @@ class GestorImagenesProductos:
                         data = await resp.json()
                         
                         if data.get("photos") and len(data["photos"]) > 0:
-                            # Obtener URL de la imagen
                             img = data["photos"][0]
                             url = img.get("src", {}).get("large")
                             
                             if url and url.startswith("http"):
-                                logger.info(f"   ✅ Imagen real encontrada")
+                                logger.info(f"   ✅ Imagen encontrada (término: '{termino}')")
                                 return url
                     except Exception as e:
-                        logger.debug(f"Error parseando Pexels: {str(e)[:80]}")
+                        logger.debug(f"Error Pexels: {str(e)[:80]}")
                         return None
                 
-                elif resp.status == 401:
-                    logger.debug("Pexels: API key inválida o no configurada")
-                    return None
-                else:
-                    logger.debug(f"Pexels respondió: {resp.status}")
-                    return None
+                return None
                     
-        except asyncio.TimeoutError:
-            logger.debug("Timeout Pexels")
-            return None
         except Exception as e:
-            logger.debug(f"Error Pexels: {str(e)[:80]}")
+            logger.debug(f"Error búsqueda: {str(e)[:80]}")
             return None
 
     # -------------------------------------------------------------------------
@@ -85,28 +149,39 @@ class GestorImagenesProductos:
     # -------------------------------------------------------------------------
     async def procesar_producto(self, codigo: str, nombre: str, session: aiohttp.ClientSession) -> dict:
         """
-        Busca imagen REAL en Pexels según el nombre del producto
+        1. Usa IA para extraer mejor término de búsqueda
+        2. Busca imagen en Pexels
+        3. Retorna URL o nada
         """
         
-        termino = nombre.strip() if nombre else ""
+        nombre_limpio = nombre.strip() if nombre else ""
 
-        if not termino or len(termino) < 2:
+        if not nombre_limpio or len(nombre_limpio) < 2:
             return {
                 "Codigo": codigo,
                 "imagen": {"existe": False, "url_github": None}
             }
 
-        termino_limpio = termino.lstrip('/').strip()[:100]
-        logger.info(f"🔍 {codigo}: '{termino_limpio[:50]}'")
+        logger.info(f"🔍 {codigo}: '{nombre_limpio[:50]}'")
 
-        # Buscar en Pexels
-        url_img = await self.buscar_imagen_pexels(termino_limpio, session)
+        # 1. Extraer término con IA
+        termino_ia = await self.extraer_termino_ia(nombre_limpio, session)
+        
+        if not termino_ia:
+            logger.info("   ❌ IA no extrajo término")
+            return {
+                "Codigo": codigo,
+                "imagen": {"existe": False, "url_github": None}
+            }
+
+        # 2. Buscar imagen con término extraído
+        url_img = await self.buscar_imagen_pexels(termino_ia, session)
         
         if url_img:
             logger.info(f"   ✅ Encontrada")
             return {
                 "Codigo": codigo,
-                "imagen": {"existe": True, "url_github": url_img, "fuente": "pexels"}
+                "imagen": {"existe": True, "url_github": url_img, "fuente": "pexels_ia"}
             }
 
         logger.info("   ❌ Sin resultados")
@@ -121,22 +196,21 @@ class GestorImagenesProductos:
     async def procesar_lote_productos(
         self,
         productos: list[dict],
-        max_concurrentes: int = 3,
-        productos_por_lote: int = 50,
-        pausa_entre_lotes: int = 60
+        max_concurrentes: int = 2,  # Reducido (IA es lenta)
+        productos_por_lote: int = 20,  # Lotes pequeños
+        pausa_entre_lotes: int = 45
     ) -> list[dict]:
         
         total = len(productos)
         resultados = []
         
         logger.info(f"\n🚀 INICIANDO PROCESAMIENTO DE {total} PRODUCTOS")
-        logger.info(f"   ⚙️ Fuente: Pexels API (imágenes REALES de productos)")
+        logger.info(f"   ⚙️ Fuente: HuggingFace IA + Pexels API")
         logger.info(f"   ⚙️ Concurrentes: {max_concurrentes}")
-        logger.info(f"   ✅ Pexels permite automatización sin restricciones")
 
-        timeout = aiohttp.ClientTimeout(total=20, connect=10, sock_read=10)
+        timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=15)
         
-        connector = aiohttp.TCPConnector(limit_per_host=3, ssl=False)
+        connector = aiohttp.TCPConnector(limit_per_host=2, ssl=False)
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             for i in range(0, total, productos_por_lote):
                 lote = productos[i:i + productos_por_lote]
@@ -174,10 +248,10 @@ class GestorImagenesProductos:
                 logger.info(f"\n✅ Lote {lote_num} completado")
                 logger.info(f"   Procesados: {len(lote_result)}/{len(lote)}")
                 logger.info(f"   Encontradas: {encontradas}")
-                logger.info(f"   Total acumulado: {len(resultados)}/{total}")
+                logger.info(f"   Tasa éxito: {(encontradas/len(lote_result)*100):.1f}%" if lote_result else "0%")
 
                 if (i + productos_por_lote) < total:
-                    logger.info(f"⏸️ Pausa {pausa_entre_lotes}s antes del siguiente lote...")
+                    logger.info(f"⏸️ Pausa {pausa_entre_lotes}s...")
                     await asyncio.sleep(pausa_entre_lotes)
 
         logger.info(f"\n{'='*60}")
