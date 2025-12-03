@@ -14,6 +14,8 @@ class GestorImagenesProductos:
     Gestor CON IA - HuggingFace API para extraer URLs de imágenes automáticamente
     """
     
+
+    
     def __init__(self, directorio_imagenes: str = None, github_token: str = None, github_repo: str = None):
         self.cache_memoria = {}
         self.hf_token = os.getenv("HUGGINGFACE_TOKEN")
