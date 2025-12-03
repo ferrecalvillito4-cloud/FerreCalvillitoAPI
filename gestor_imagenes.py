@@ -16,7 +16,7 @@ class GestorImagenesProductos:
     
     def __init__(self, directorio_imagenes: str = None, github_token: str = None, github_repo: str = None):
         self.cache_memoria = {}
-        self.hf_token = os.getenv("HUGGINGFACE_TOKEN", "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")
+        self.hf_token = os.getenv("HUGGINGFACE_TOKEN")
         self.pexels_key = os.getenv("PEXELS_API_KEY", "7uKpeg5kqPkJgnpyd4Uq5F6kSj0rt5GJH9RPZLJbqN2i6hfWBfO3IdeZ")
         logger.info("✅ Gestor inicializado (HuggingFace IA + Pexels API)")
 
