@@ -504,51 +504,59 @@ async def procesar_imagenes_background(productos_lote):
             productos_lote,
             max_concurrentes=3,
             productos_por_lote=50,
-            pausa_entre_lotes=120
+            pausa_entre_lotes=60
         )
         
         print(f"\n✅ Procesamiento completado. Resultados: {len(resultados)}")
 
         # 2️⃣ Cargar productos completos desde GitHub
         print("📥 Cargando productos desde GitHub...")
-        productos_completos = {p["Codigo"]: p for p in gh.cargar_productos_github()}
-        print(f"   Total productos en GitHub: {len(productos_completos)}")
+        productos_github = gh.cargar_productos_github()
+        print(f"   Total productos en GitHub: {len(productos_github)}")
         
-        # 3️⃣ Actualizar solo los que obtuvieron imagen
+        # 3️⃣ Crear diccionario para búsqueda rápida
+        productos_dict = {p.get("Codigo"): p for p in productos_github}
+        
+        # 4️⃣ Actualizar con las imágenes encontradas
         imagenes_encontradas = 0
         actualizados = []
         
-        for prod in resultados:
-            codigo = prod.get("Codigo")
-            if not codigo:
-                continue
-
-            imagen = prod.get("imagen", {})
+        for resultado in resultados:
+            codigo = resultado.get("Codigo")
+            imagen = resultado.get("imagen", {})
             url_img = imagen.get("url_github")
+            fuente = imagen.get("fuente", "pexels")
             
-            if url_img and codigo in productos_completos:
-                productos_completos[codigo]["imagen"] = {
+            # Solo actualizar si encontró imagen
+            if url_img and codigo in productos_dict:
+                productos_dict[codigo]["imagen"] = {
                     "existe": True,
                     "url_github": url_img,
-                    "fuente": "duckduckgo"
+                    "fuente": fuente
                 }
                 imagenes_encontradas += 1
                 actualizados.append(codigo)
+                print(f"   ✅ {codigo}: Imagen guardada de {fuente}")
         
         print(f"\n📊 ESTADÍSTICAS:")
         print(f"   Procesados: {len(resultados)}")
         print(f"   Imágenes encontradas: {imagenes_encontradas}")
-        print(f"   Productos actualizados: {actualizados[:5]}..." if len(actualizados) > 5 else f"   Productos actualizados: {actualizados}")
+        print(f"   Tasa éxito: {(imagenes_encontradas/len(resultados)*100):.1f}%" if resultados else "0%")
 
-        # 4️⃣ Guardar todos los productos actualizados
+        # 5️⃣ Guardar todos los productos actualizados en GitHub
         if imagenes_encontradas > 0:
             print("\n💾 Guardando en GitHub...")
-            productos_actualizados = list(productos_completos.values())
+            productos_actualizados = list(productos_dict.values())
+            
+            # Guardar en GitHub
             gh.guardar_productos_github(productos_actualizados)
+            
+            # Actualizar en memoria
             productos_api = productos_actualizados
-            print("   ✅ Guardado exitoso")
+            
+            print(f"   ✅ {imagenes_encontradas} productos con imágenes guardados en GitHub")
         else:
-            print("\n⚠️ No se encontraron imágenes nuevas, no se guarda")
+            print("\n⚠️ No se encontraron imágenes nuevas")
         
         print(f"\n{'='*70}")
         print("✅ PROCESAMIENTO EN SEGUNDO PLANO FINALIZADO")
