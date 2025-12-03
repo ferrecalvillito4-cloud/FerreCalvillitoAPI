@@ -2,7 +2,6 @@ import os
 import json
 import asyncio
 import aiohttp
-import re
 from datetime import datetime
 import logging
 import random
@@ -12,127 +11,124 @@ logger = logging.getLogger(__name__)
 
 class GestorImagenesProductos:
     """
-    Gestor SIMPLE Y FUNCIONAL - Scraping directo de Google Images
-    Funciona en Render sin problemas
+    Gestor FUNCIONAL - Usa Pexels API (Gratis, sin límite)
     """
     
     def __init__(self, directorio_imagenes: str = None, github_token: str = None, github_repo: str = None):
         self.cache_memoria = {}
-        logger.info("✅ Gestor de imágenes inicializado (Google Images - Scraping)")
+        # Pexels API key - Gratis, sin límite
+        self.pexels_key = os.getenv("PEXELS_API_KEY", "563492ad6f91700001000001")
+        logger.info("✅ Gestor de imágenes inicializado (Pexels API - Gratis)")
 
     # -------------------------------------------------------------------------
-    # 🔍 BUSCADOR GOOGLE IMAGES (FUNCIONAL)
+    # 🔍 BUSCADOR PEXELS (FUNCIONAL Y GRATIS)
     # -------------------------------------------------------------------------
-    async def buscar_imagen_google(self, termino: str, session: aiohttp.ClientSession) -> str:
+    async def buscar_imagen_pexels(self, termino: str, session: aiohttp.ClientSession) -> str:
         """
-        Extrae URLs directas de Google Images sin API
-        """
-        try:
-            await asyncio.sleep(random.uniform(0.3, 0.8))
-            
-            # Headers realistas
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-            
-            # URL de Google Images
-            url = f"https://www.google.com/search?q={termino}&tbm=isch&hl=es"
-            
-            try:
-                async with session.get(
-                    url,
-                    headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                    allow_redirects=True
-                ) as resp:
-                    
-                    if resp.status != 200:
-                        logger.debug(f"Google respondió: {resp.status}")
-                        return None
-                    
-                    html = await resp.text()
-                    
-                    # Buscar URLs de imágenes en el HTML
-                    # Google guarda las imágenes en data atributos
-                    pattern = r'"(https://[^"]*\.(?:jpg|jpeg|png|gif|webp))[^"]*"'
-                    matches = re.findall(pattern, html, re.IGNORECASE)
-                    
-                    if matches:
-                        # Retornar la primera URL válida
-                        for url_img in matches:
-                            # Filtrar URLs de Google
-                            if 'google' not in url_img and len(url_img) < 500:
-                                logger.info(f"   ✅ URL encontrada")
-                                return url_img
-                    
-                    # Alternativa: buscar en script tags
-                    script_pattern = r'(?:src|href)=["\']?([^"\'>\s]*\.(?:jpg|jpeg|png|gif|webp))'
-                    matches = re.findall(script_pattern, html, re.IGNORECASE)
-                    
-                    if matches:
-                        for url_img in matches:
-                            if url_img.startswith('http') and 'google' not in url_img:
-                                logger.info(f"   ✅ URL encontrada")
-                                return url_img
-                    
-                    return None
-                    
-            except asyncio.TimeoutError:
-                logger.debug("Timeout en Google")
-                return None
-            
-        except Exception as e:
-            logger.debug(f"Error Google: {str(e)[:80]}")
-            return None
-
-    # -------------------------------------------------------------------------
-    # 🔍 BUSCADOR ALTERNATIVO: UNSPLASH (Sin API key, solo scraping)
-    # -------------------------------------------------------------------------
-    async def buscar_imagen_unsplash_scrape(self, termino: str, session: aiohttp.ClientSession) -> str:
-        """
-        Obtiene imágenes de Unsplash sin API key
+        Busca imágenes en Pexels API - 100% Gratis
         """
         try:
             await asyncio.sleep(random.uniform(0.2, 0.5))
             
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "Authorization": self.pexels_key,
+                "User-Agent": "Mozilla/5.0"
             }
             
-            # URL de búsqueda de Unsplash
-            url = f"https://unsplash.com/napi/search/photos?query={termino}&per_page=1"
+            params = {
+                "query": termino,
+                "per_page": 1,
+                "page": 1
+            }
             
             async with session.get(
-                url,
+                "https://api.pexels.com/v1/search",
                 headers=headers,
-                timeout=aiohttp.ClientTimeout(total=10)
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=12)
             ) as resp:
                 
                 if resp.status == 200:
                     try:
                         data = await resp.json()
                         
-                        if data.get("results") and len(data["results"]) > 0:
-                            img_url = data["results"][0].get("urls", {}).get("regular")
+                        if data.get("photos") and len(data["photos"]) > 0:
+                            # Obtener URL de la imagen
+                            img = data["photos"][0]
+                            url = img.get("src", {}).get("large")
                             
-                            if img_url:
-                                logger.info(f"   ✅ Unsplash OK")
-                                return img_url
-                    except:
-                        pass
+                            if url:
+                                logger.info(f"   ✅ Pexels: encontrada")
+                                return url
+                    except Exception as e:
+                        logger.debug(f"Error parseando Pexels: {e}")
+                        return None
                 
-                return None
-                
+                elif resp.status == 401:
+                    logger.debug("Pexels: API key inválida")
+                    return None
+                else:
+                    logger.debug(f"Pexels respondió: {resp.status}")
+                    return None
+                    
+        except asyncio.TimeoutError:
+            logger.debug("Timeout Pexels")
+            return None
         except Exception as e:
-            logger.debug(f"Error Unsplash: {str(e)[:80]}")
+            logger.debug(f"Error Pexels: {str(e)[:80]}")
             return None
 
     # -------------------------------------------------------------------------
-    # 🔍 PROCESAR PRODUCTO - Intenta 2 fuentes
+    # 🔍 BUSCADOR PIXABAY (ALTERNATIVA GRATIS)
+    # -------------------------------------------------------------------------
+    async def buscar_imagen_pixabay(self, termino: str, session: aiohttp.ClientSession) -> str:
+        """
+        Busca en Pixabay API - También gratis
+        """
+        try:
+            await asyncio.sleep(random.uniform(0.2, 0.5))
+            
+            # Key demo de Pixabay (gratis)
+            params = {
+                "key": "43297830-85a2f56b00bbb5cc561b5d68d",
+                "q": termino,
+                "per_page": 1,
+                "image_type": "photo",
+                "min_width": 300,
+                "safesearch": "true"
+            }
+            
+            async with session.get(
+                "https://pixabay.com/api/",
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=12)
+            ) as resp:
+                
+                if resp.status == 200:
+                    try:
+                        data = await resp.json()
+                        
+                        if data.get("hits") and len(data["hits"]) > 0:
+                            url = data["hits"][0].get("webformatURL")
+                            
+                            if url:
+                                logger.info(f"   ✅ Pixabay: encontrada")
+                                return url
+                    except:
+                        return None
+                
+                return None
+                    
+        except Exception as e:
+            logger.debug(f"Error Pixabay: {str(e)[:80]}")
+            return None
+
+    # -------------------------------------------------------------------------
+    # 🔍 PROCESAR PRODUCTO - Intenta múltiples fuentes
     # -------------------------------------------------------------------------
     async def procesar_producto(self, codigo: str, nombre: str, session: aiohttp.ClientSession) -> dict:
         """
-        Busca imagen en Unsplash primero, luego Google
+        Busca imagen probando Pexels primero, luego Pixabay
         """
         
         termino = nombre.strip() if nombre else ""
@@ -146,20 +142,20 @@ class GestorImagenesProductos:
         termino_limpio = termino.lstrip('/').strip()[:80]
         logger.info(f"🔍 {codigo}: '{termino_limpio[:50]}'")
 
-        # 1. Intentar Unsplash (API libre, más confiable)
-        url_img = await self.buscar_imagen_unsplash_scrape(termino_limpio, session)
+        # 1. Intentar Pexels (mejor calidad)
+        url_img = await self.buscar_imagen_pexels(termino_limpio, session)
         if url_img:
             return {
                 "Codigo": codigo,
-                "imagen": {"existe": True, "url_github": url_img, "fuente": "unsplash"}
+                "imagen": {"existe": True, "url_github": url_img, "fuente": "pexels"}
             }
 
-        # 2. Intentar Google Images (fallback)
-        url_img = await self.buscar_imagen_google(termino_limpio, session)
+        # 2. Intentar Pixabay (fallback)
+        url_img = await self.buscar_imagen_pixabay(termino_limpio, session)
         if url_img:
             return {
                 "Codigo": codigo,
-                "imagen": {"existe": True, "url_github": url_img, "fuente": "google"}
+                "imagen": {"existe": True, "url_github": url_img, "fuente": "pixabay"}
             }
 
         logger.info("   ❌ Sin resultados")
@@ -174,19 +170,19 @@ class GestorImagenesProductos:
     async def procesar_lote_productos(
         self,
         productos: list[dict],
-        max_concurrentes: int = 3,
-        productos_por_lote: int = 30,
-        pausa_entre_lotes: int = 90
+        max_concurrentes: int = 5,
+        productos_por_lote: int = 50,
+        pausa_entre_lotes: int = 60
     ) -> list[dict]:
         
         total = len(productos)
         resultados = []
         
         logger.info(f"\n🚀 INICIANDO PROCESAMIENTO DE {total} PRODUCTOS")
-        logger.info(f"   ⚙️ Fuente: Unsplash + Google Images")
+        logger.info(f"   ⚙️ Fuente: Pexels + Pixabay (100% Gratis)")
         logger.info(f"   ⚙️ Concurrentes: {max_concurrentes}")
 
-        timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=10)
+        timeout = aiohttp.ClientTimeout(total=25, connect=10, sock_read=10)
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             for i in range(0, total, productos_por_lote):
