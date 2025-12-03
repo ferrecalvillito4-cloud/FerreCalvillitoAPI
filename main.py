@@ -116,6 +116,9 @@ direcciones: list[dict] = []
 telefonos: list[dict] = []
 productos_api: list[dict] = []
 
+proceso_activo = False
+detener_proceso_flag = False
+
 # =============================
 # 🧠 Leer cadena de conexión
 # =============================
@@ -268,6 +271,21 @@ async def shutdown_event():
 # =============================
 # 🏠 ENDPOINTS BÁSICOS
 # =============================
+
+@app.post("/api/productos/detener-proceso")
+async def detener_proceso():
+    """Detiene el procesamiento de imágenes"""
+    global detener_proceso_flag, proceso_activo
+    
+    if not proceso_activo:
+        return {"ok": False, "error": "No hay proceso activo"}
+    
+    detener_proceso_flag = True
+    
+    return {
+        "ok": True,
+        "mensaje": "⏹️ Deteniendo proceso..."
+    }
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -485,91 +503,54 @@ async def admin_upload_productos(data: list[dict]):
         return {"ok": False, "error": str(e)}
     
 async def procesar_imagenes_background(productos_lote):
-    """Procesa un lote de productos en segundo plano"""
-    global productos_api
+    """Procesa un lote de productos en segundo plano CON OPCIÓN DE DETENER"""
+    global productos_api, proceso_activo, detener_proceso_flag
 
     if not gestor_imagenes:
         print("❌ Gestor no disponible")
         return
 
-    print(f"\n{'='*70}")
-    print(f"🖼️ INICIANDO PROCESAMIENTO EN SEGUNDO PLANO")
-    print(f"   Productos en lote: {len(productos_lote)}")
-    print(f"{'='*70}\n")
+    proceso_activo = True
+    detener_proceso_flag = False
+
+    print(f"\n🖼️ INICIANDO PROCESAMIENTO - {len(productos_lote)} productos\n")
 
     try:
-        # 1️⃣ Procesar el lote
-        print("🔄 Llamando a gestor_imagenes.procesar_lote_productos()...")
-        resultados = await gestor_imagenes.procesar_lote_productos(
-            productos_lote,
-            max_concurrentes=3,
-            productos_por_lote=50,
-            pausa_entre_lotes=60
-        )
-        
-        print(f"\n✅ Procesamiento completado. Resultados: {len(resultados)}")
-
-        # 2️⃣ Cargar productos completos desde GitHub
-        print("📥 Cargando productos desde GitHub...")
         productos_github = gh.cargar_productos_github()
-        print(f"   Total productos en GitHub: {len(productos_github)}")
-        
-        # 3️⃣ Crear diccionario para búsqueda rápida
         productos_dict = {p.get("Codigo"): p for p in productos_github}
         
-        # 4️⃣ Actualizar con las imágenes encontradas
         imagenes_encontradas = 0
-        actualizados = []
         
-        for resultado in resultados:
-            codigo = resultado.get("Codigo")
-            imagen = resultado.get("imagen", {})
-            url_img = imagen.get("url_github")
-            fuente = imagen.get("fuente", "pexels")
+        # Procesar de a 5 productos para poder detener rápido
+        for i in range(0, len(productos_lote), 5):
+            if detener_proceso_flag:
+                print(f"\n🛑 PROCESO DETENIDO - Procesados: {i}/{len(productos_lote)}\n")
+                break
             
-            # Solo actualizar si encontró imagen
-            if url_img and codigo in productos_dict:
-                productos_dict[codigo]["imagen"] = {
-                    "existe": True,
-                    "url_github": url_img,
-                    "fuente": fuente
-                }
-                imagenes_encontradas += 1
-                actualizados.append(codigo)
-                print(f"   ✅ {codigo}: Imagen guardada de {fuente}")
+            sublote = productos_lote[i:i+5]
+            resultados = await gestor_imagenes.procesar_lote_productos(
+                sublote, max_concurrentes=2, productos_por_lote=5, pausa_entre_lotes=10
+            )
+            
+            for resultado in resultados:
+                codigo = resultado.get("Codigo")
+                imagen = resultado.get("imagen", {})
+                if imagen.get("url_github") and codigo in productos_dict:
+                    productos_dict[codigo]["imagen"] = imagen
+                    imagenes_encontradas += 1
         
-        print(f"\n📊 ESTADÍSTICAS:")
-        print(f"   Procesados: {len(resultados)}")
-        print(f"   Imágenes encontradas: {imagenes_encontradas}")
-        print(f"   Tasa éxito: {(imagenes_encontradas/len(resultados)*100):.1f}%" if resultados else "0%")
-
-        # 5️⃣ Guardar todos los productos actualizados en GitHub
         if imagenes_encontradas > 0:
-            print("\n💾 Guardando en GitHub...")
             productos_actualizados = list(productos_dict.values())
-            
-            # Guardar en GitHub
             gh.guardar_productos_github(productos_actualizados)
-            
-            # Actualizar en memoria
             productos_api = productos_actualizados
-            
-            print(f"   ✅ {imagenes_encontradas} productos con imágenes guardados en GitHub")
-        else:
-            print("\n⚠️ No se encontraron imágenes nuevas")
-        
-        print(f"\n{'='*70}")
-        print("✅ PROCESAMIENTO EN SEGUNDO PLANO FINALIZADO")
-        print(f"   Imágenes nuevas: {imagenes_encontradas}/{len(productos_lote)}")
-        print(f"{'='*70}\n")
+            print(f"✅ {imagenes_encontradas} imágenes guardadas\n")
 
     except Exception as e:
-        print(f"\n{'='*70}")
-        print(f"❌ ERROR EN PROCESAMIENTO EN SEGUNDO PLANO")
-        print(f"   Error: {e}")
-        print(f"   Traceback:")
-        print(traceback.format_exc())
-        print(f"{'='*70}\n")
+        print(f"❌ ERROR: {e}\n")
+    
+    finally:
+        proceso_activo = False
+        detener_proceso_flag = False
 
 @app.get("/api/productos/progreso-imagenes")
 async def progreso_imagenes():
