@@ -2,117 +2,137 @@ import os
 import json
 import asyncio
 import aiohttp
+import re
 from datetime import datetime
 import logging
 import random
-import shutil
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class GestorImagenesProductos:
     """
-    Gestor GRATIS - Usa Bing Images (sin API key)
+    Gestor SIMPLE Y FUNCIONAL - Scraping directo de Google Images
+    Funciona en Render sin problemas
     """
     
     def __init__(self, directorio_imagenes: str = None, github_token: str = None, github_repo: str = None):
         self.cache_memoria = {}
-        logger.info("✅ Gestor de imágenes inicializado (Bing Images - Gratis)")
-        
-        try:
-            from bing_image_downloader import downloader
-            self.downloader = downloader
-            self.tiene_bing = True
-            logger.info("   ✅ bing-image-downloader disponible")
-        except ImportError:
-            self.tiene_bing = False
-            logger.warning("   ⚠️ Instala: pip install bing-image-downloader")
+        logger.info("✅ Gestor de imágenes inicializado (Google Images - Scraping)")
 
     # -------------------------------------------------------------------------
-    # 🔍 BUSCADOR BING IMAGES (GRATIS)
+    # 🔍 BUSCADOR GOOGLE IMAGES (FUNCIONAL)
     # -------------------------------------------------------------------------
-    async def buscar_imagen_bing(self, termino: str) -> str:
+    async def buscar_imagen_google(self, termino: str, session: aiohttp.ClientSession) -> str:
         """
-        Descarga imagen de Bing Images - Sin costo
+        Extrae URLs directas de Google Images sin API
         """
-        if not self.tiene_bing:
-            return None
-
         try:
-            await asyncio.sleep(random.uniform(0.2, 0.6))
+            await asyncio.sleep(random.uniform(0.3, 0.8))
             
-            loop = asyncio.get_event_loop()
+            # Headers realistas
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
             
-            def buscar_sync():
-                try:
-                    # Nombre limpio para la carpeta
-                    nombre_limpio = "".join(c for c in termino if c.isalnum() or c.isspace())[:30]
-                    output_dir = "temp_imagenes"
+            # URL de Google Images
+            url = f"https://www.google.com/search?q={termino}&tbm=isch&hl=es"
+            
+            try:
+                async with session.get(
+                    url,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=15),
+                    allow_redirects=True
+                ) as resp:
                     
-                    # Crear directorio temporal
-                    os.makedirs(output_dir, exist_ok=True)
+                    if resp.status != 200:
+                        logger.debug(f"Google respondió: {resp.status}")
+                        return None
                     
-                    # Descargar 1 imagen
-                    self.downloader.download(
-                        termino,
-                        limit=1,
-                        output_dir=output_dir,
-                        adult_filter_off=True,
-                        force_replace=False,
-                        timeout=10,
-                        verbose=False,
-                        chromedriver=None  # Sin selenium
-                    )
+                    html = await resp.text()
                     
-                    # Buscar la imagen descargada
-                    carpeta = os.path.join(output_dir, nombre_limpio)
+                    # Buscar URLs de imágenes en el HTML
+                    # Google guarda las imágenes en data atributos
+                    pattern = r'"(https://[^"]*\.(?:jpg|jpeg|png|gif|webp))[^"]*"'
+                    matches = re.findall(pattern, html, re.IGNORECASE)
                     
-                    # Si no está con el nombre limpio, buscar directorios
-                    if not os.path.exists(carpeta):
-                        # Listar todos los directorios en output_dir
-                        dirs = [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d))]
-                        if dirs:
-                            carpeta = os.path.join(output_dir, dirs[0])
+                    if matches:
+                        # Retornar la primera URL válida
+                        for url_img in matches:
+                            # Filtrar URLs de Google
+                            if 'google' not in url_img and len(url_img) < 500:
+                                logger.info(f"   ✅ URL encontrada")
+                                return url_img
                     
-                    if os.path.exists(carpeta):
-                        archivos = os.listdir(carpeta)
-                        if archivos:
-                            # Obtener ruta de la imagen
-                            img_path = os.path.join(carpeta, archivos[0])
-                            
-                            # Leer como ruta local (será servida desde GitHub)
-                            # Por ahora retornar la ruta local
-                            if os.path.isfile(img_path):
-                                logger.info(f"   ✅ Imagen descargada: {img_path}")
-                                return f"file://{img_path}"
+                    # Alternativa: buscar en script tags
+                    script_pattern = r'(?:src|href)=["\']?([^"\'>\s]*\.(?:jpg|jpeg|png|gif|webp))'
+                    matches = re.findall(script_pattern, html, re.IGNORECASE)
+                    
+                    if matches:
+                        for url_img in matches:
+                            if url_img.startswith('http') and 'google' not in url_img:
+                                logger.info(f"   ✅ URL encontrada")
+                                return url_img
                     
                     return None
                     
-                except Exception as e:
-                    logger.debug(f"Error Bing: {str(e)[:100]}")
-                    return None
+            except asyncio.TimeoutError:
+                logger.debug("Timeout en Google")
+                return None
             
-            # Ejecutar en thread (no bloquea async)
-            url_img = await asyncio.wait_for(
-                loop.run_in_executor(None, buscar_sync),
-                timeout=25
-            )
-            
-            return url_img
-
-        except asyncio.TimeoutError:
-            logger.debug(f"Timeout en búsqueda: {termino[:40]}")
-            return None
         except Exception as e:
-            logger.debug(f"Error general: {str(e)[:100]}")
+            logger.debug(f"Error Google: {str(e)[:80]}")
             return None
 
     # -------------------------------------------------------------------------
-    # 🔍 PROCESAR PRODUCTO
+    # 🔍 BUSCADOR ALTERNATIVO: UNSPLASH (Sin API key, solo scraping)
+    # -------------------------------------------------------------------------
+    async def buscar_imagen_unsplash_scrape(self, termino: str, session: aiohttp.ClientSession) -> str:
+        """
+        Obtiene imágenes de Unsplash sin API key
+        """
+        try:
+            await asyncio.sleep(random.uniform(0.2, 0.5))
+            
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            
+            # URL de búsqueda de Unsplash
+            url = f"https://unsplash.com/napi/search/photos?query={termino}&per_page=1"
+            
+            async with session.get(
+                url,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as resp:
+                
+                if resp.status == 200:
+                    try:
+                        data = await resp.json()
+                        
+                        if data.get("results") and len(data["results"]) > 0:
+                            img_url = data["results"][0].get("urls", {}).get("regular")
+                            
+                            if img_url:
+                                logger.info(f"   ✅ Unsplash OK")
+                                return img_url
+                    except:
+                        pass
+                
+                return None
+                
+        except Exception as e:
+            logger.debug(f"Error Unsplash: {str(e)[:80]}")
+            return None
+
+    # -------------------------------------------------------------------------
+    # 🔍 PROCESAR PRODUCTO - Intenta 2 fuentes
     # -------------------------------------------------------------------------
     async def procesar_producto(self, codigo: str, nombre: str, session: aiohttp.ClientSession) -> dict:
         """
-        Busca imagen de Bing
+        Busca imagen en Unsplash primero, luego Google
         """
         
         termino = nombre.strip() if nombre else ""
@@ -126,14 +146,20 @@ class GestorImagenesProductos:
         termino_limpio = termino.lstrip('/').strip()[:80]
         logger.info(f"🔍 {codigo}: '{termino_limpio[:50]}'")
 
-        # Buscar en Bing
-        url_img = await self.buscar_imagen_bing(termino_limpio)
-        
-        if url_img and url_img.startswith("file://"):
-            logger.info(f"   ✅ Encontrada")
+        # 1. Intentar Unsplash (API libre, más confiable)
+        url_img = await self.buscar_imagen_unsplash_scrape(termino_limpio, session)
+        if url_img:
             return {
                 "Codigo": codigo,
-                "imagen": {"existe": True, "url_github": url_img, "fuente": "bing"}
+                "imagen": {"existe": True, "url_github": url_img, "fuente": "unsplash"}
+            }
+
+        # 2. Intentar Google Images (fallback)
+        url_img = await self.buscar_imagen_google(termino_limpio, session)
+        if url_img:
+            return {
+                "Codigo": codigo,
+                "imagen": {"existe": True, "url_github": url_img, "fuente": "google"}
             }
 
         logger.info("   ❌ Sin resultados")
@@ -148,19 +174,19 @@ class GestorImagenesProductos:
     async def procesar_lote_productos(
         self,
         productos: list[dict],
-        max_concurrentes: int = 2,  # Reducido (Bing es lento)
-        productos_por_lote: int = 15,  # Lotes pequeños
-        pausa_entre_lotes: int = 120  # Pausa entre lotes
+        max_concurrentes: int = 3,
+        productos_por_lote: int = 30,
+        pausa_entre_lotes: int = 90
     ) -> list[dict]:
         
         total = len(productos)
         resultados = []
         
         logger.info(f"\n🚀 INICIANDO PROCESAMIENTO DE {total} PRODUCTOS")
-        logger.info(f"   ⚙️ Fuente: Bing Images (GRATIS)")
-        logger.info(f"   ⚙️ Concurrentes: {max_concurrentes}, Por lote: {productos_por_lote}")
+        logger.info(f"   ⚙️ Fuente: Unsplash + Google Images")
+        logger.info(f"   ⚙️ Concurrentes: {max_concurrentes}")
 
-        timeout = aiohttp.ClientTimeout(total=40, connect=10, sock_read=10)
+        timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=10)
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             for i in range(0, total, productos_por_lote):
@@ -198,11 +224,11 @@ class GestorImagenesProductos:
 
                 logger.info(f"\n✅ Lote {lote_num} completado")
                 logger.info(f"   Procesados: {len(lote_result)}/{len(lote)}")
-                logger.info(f"   Encontradas en este lote: {encontradas}")
+                logger.info(f"   Encontradas: {encontradas}")
                 logger.info(f"   Total acumulado: {len(resultados)}/{total}")
 
                 if (i + productos_por_lote) < total:
-                    logger.info(f"⏸️ Pausa {pausa_entre_lotes}s antes del siguiente lote...")
+                    logger.info(f"⏸️ Pausa {pausa_entre_lotes}s...")
                     await asyncio.sleep(pausa_entre_lotes)
 
         logger.info(f"\n{'='*60}")
@@ -213,14 +239,6 @@ class GestorImagenesProductos:
         logger.info(f"   Imágenes encontradas: {total_encontradas}")
         logger.info(f"   Tasa éxito: {tasa:.1f}%")
         logger.info(f"{'='*60}\n")
-        
-        # Limpiar archivos temporales
-        if os.path.exists("temp_imagenes"):
-            try:
-                shutil.rmtree("temp_imagenes")
-                logger.info("🗑️ Archivos temporales limpios")
-            except:
-                pass
         
         return resultados
 
