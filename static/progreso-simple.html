@@ -109,7 +109,7 @@
         
         .controls {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
             margin-top: 14px;
         }
@@ -333,10 +333,11 @@
                 <div class="top-row">
                     <div style="display:flex;gap:18px;align-items:center">
                         <div id="estado" class="estado">⏳</div>
-                        <div style="min-width:260px">
+                        <div style="min-width:320px">
                             <div id="mensaje" class="mensaje">Conectando con el servidor...</div>
                             <div class="controls">
                                 <button id="btn-procesar" class="btn btn-primary" onclick="procesarImagenes()">▶️ Procesar</button>
+                                <button id="btn-detener" class="btn btn-danger" onclick="detenerProceso()" style="display:none">⏹️ Detener</button>
                                 <button id="btn-debug" class="btn btn-info" onclick="verDebug()">🔍 Debug</button>
                             </div>
                         </div>
@@ -398,13 +399,14 @@
         </div>
 
         <footer>
-            <div class="small">Built: Panel v2 — FerreCalvillito</div>
+            <div class="small">Built: Panel v2.1 — FerreCalvillito</div>
             <div class="small">API: <strong>/api/productos/</strong></div>
         </footer>
     </div>
 
     <script>
         let errorCount = 0;
+        let procesando = false;
         const logEl = document.getElementById('log');
         const debugPanel = document.getElementById('debug-panel');
         const debugContent = document.getElementById('debug-content');
@@ -478,7 +480,11 @@
 
         async function procesarImagenes() {
             try {
-                document.getElementById('btn-procesar').disabled = true;
+                procesando = true;
+                document.getElementById('btn-procesar').style.display = 'none';
+                document.getElementById('btn-detener').style.display = 'inline-flex';
+                document.getElementById('estado').textContent = '⚙️';
+
                 showInfo('⏳ Procesando imágenes...');
                 pushLog('Iniciando procesamiento manual...');
 
@@ -492,12 +498,45 @@
                 } else {
                     showError(data.error || 'Error al procesar');
                     pushLog(`❌ Error: ${data.error}`);
-                    document.getElementById('btn-procesar').disabled = false;
+                    resetearBotones();
                 }
             } catch (err) {
                 showError('Error al procesar imágenes');
-                document.getElementById('btn-procesar').disabled = false;
+                resetearBotones();
             }
+        }
+
+        async function detenerProceso() {
+            try {
+                showInfo('🛑 Deteniendo proceso...');
+                pushLog('Solicitando detención del proceso...');
+
+                const data = await callApi('/api/productos/detener-proceso', {
+                    method: 'POST'
+                });
+
+                if (data.ok) {
+                    showSuccess(data.mensaje || 'Proceso detenido');
+                    pushLog(`✅ ${data.mensaje}`);
+                } else {
+                    showError(data.error || 'Error al detener');
+                    pushLog(`❌ Error: ${data.error}`);
+                }
+
+                resetearBotones();
+            } catch (err) {
+                showError('Error al detener proceso');
+                pushLog(`❌ ${err.message}`);
+                resetearBotones();
+            }
+        }
+
+        function resetearBotones() {
+            procesando = false;
+            document.getElementById('btn-procesar').style.display = 'inline-flex';
+            document.getElementById('btn-detener').style.display = 'none';
+            document.getElementById('btn-procesar').disabled = false;
+            document.getElementById('estado').textContent = '📊';
         }
 
         function copiarEstado() {
@@ -536,9 +575,11 @@
                 const porcentaje = total > 0 ? ((conImagen / total) * 100).toFixed(1) : 0;
 
                 // Actualizar UI
-                document.getElementById('estado').textContent = '📊';
+                if (!procesando) {
+                    document.getElementById('estado').textContent = '📊';
+                }
                 document.getElementById('mensaje').textContent = `${conImagen} de ${total} productos con imagen`;
-                document.getElementById('badge-estado').textContent = 'Conectado';
+                document.getElementById('badge-estado').textContent = procesando ? 'Procesando' : 'Conectado';
 
                 // Barra de progreso
                 const progressBar = document.getElementById('progress-bar');
@@ -557,6 +598,10 @@
                         minutos < 60 ? `${minutos}m` : `${Math.floor(minutos/60)}h ${minutos%60}m`;
                 } else {
                     document.getElementById('tiempo').textContent = 'Completo';
+                    if (procesando) {
+                        resetearBotones();
+                        showSuccess('✅ Procesamiento completado');
+                    }
                 }
 
                 // Timestamp
