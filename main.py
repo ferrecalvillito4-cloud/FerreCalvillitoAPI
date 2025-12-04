@@ -1059,6 +1059,277 @@ async def progreso_detallado():
     }
 
 # =============================
+# 📊 VERIFICACIÓN DE IMÁGENES
+# =============================
+
+@app.get("/api/productos/estadisticas-imagenes")
+async def estadisticas_imagenes():
+    """
+    Muestra estadísticas completas de imágenes
+    """
+    try:
+        productos = gh.cargar_productos_github()
+        
+        # Contadores
+        total = len(productos)
+        con_imagen = 0
+        sin_imagen = 0
+        sin_nombre = 0
+        
+        # Productos con imagen (ejemplos)
+        ejemplos_con_imagen = []
+        ejemplos_sin_imagen = []
+        
+        for prod in productos:
+            nombre = prod.get('Nombre', '').strip()
+            imagen = prod.get('imagen', {})
+            
+            # Sin nombre
+            if not nombre:
+                sin_nombre += 1
+                continue
+            
+            # Con imagen
+            if imagen.get('existe') and imagen.get('url_github'):
+                con_imagen += 1
+                if len(ejemplos_con_imagen) < 10:
+                    ejemplos_con_imagen.append({
+                        'codigo': prod.get('Codigo'),
+                        'nombre': nombre[:60],
+                        'url': imagen.get('url_github'),
+                        'fuente': imagen.get('fuente', 'desconocida')
+                    })
+            else:
+                sin_imagen += 1
+                if len(ejemplos_sin_imagen) < 10:
+                    ejemplos_sin_imagen.append({
+                        'codigo': prod.get('Codigo'),
+                        'nombre': nombre[:60]
+                    })
+        
+        # Calcular porcentajes
+        procesables = total - sin_nombre
+        porcentaje_completado = (con_imagen / procesables * 100) if procesables > 0 else 0
+        
+        return {
+            "ok": True,
+            "timestamp": datetime.now().isoformat(),
+            "resumen": {
+                "total_productos": total,
+                "con_nombre": procesables,
+                "sin_nombre": sin_nombre,
+                "con_imagen": con_imagen,
+                "sin_imagen": sin_imagen,
+                "porcentaje_completado": round(porcentaje_completado, 2)
+            },
+            "ejemplos": {
+                "con_imagen": ejemplos_con_imagen,
+                "sin_imagen": ejemplos_sin_imagen
+            },
+            "estimaciones": {
+                "tiempo_restante_50x": f"~{sin_imagen * 0.5 / 60:.1f} minutos",
+                "lotes_necesarios_50": (sin_imagen + 49) // 50,
+                "tiempo_con_pausas": f"~{((sin_imagen + 49) // 50) * 2:.1f} minutos"
+            }
+        }
+    
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": str(e)
+        }
+
+
+@app.get("/api/productos/con-imagen")
+async def listar_productos_con_imagen(
+    limite: int = 100,
+    offset: int = 0
+):
+    """
+    Lista productos que YA tienen imagen
+    """
+    try:
+        productos = gh.cargar_productos_github()
+        
+        # Filtrar solo con imagen
+        con_imagen = [
+            {
+                'codigo': p.get('Codigo'),
+                'nombre': p.get('Nombre', '')[:60],
+                'url_imagen': p.get('imagen', {}).get('url_github'),
+                'fuente': p.get('imagen', {}).get('fuente', 'desconocida'),
+                'precio': p.get('Precio', 0)
+            }
+            for p in productos 
+            if p.get('imagen', {}).get('existe') 
+            and p.get('imagen', {}).get('url_github')
+        ]
+        
+        # Paginación
+        total = len(con_imagen)
+        pagina = con_imagen[offset:offset + limite]
+        
+        return {
+            "ok": True,
+            "total": total,
+            "offset": offset,
+            "limite": limite,
+            "productos": pagina
+        }
+    
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.get("/api/productos/sin-imagen")
+async def listar_productos_sin_imagen(
+    limite: int = 100,
+    offset: int = 0
+):
+    """
+    Lista productos que NO tienen imagen
+    """
+    try:
+        productos = gh.cargar_productos_github()
+        
+        # Filtrar sin imagen pero con nombre
+        sin_imagen = [
+            {
+                'codigo': p.get('Codigo'),
+                'nombre': p.get('Nombre', '')[:60],
+                'existencia': p.get('Existencia', 0),
+                'precio': p.get('Precio', 0)
+            }
+            for p in productos 
+            if p.get('Nombre', '').strip()  # Tiene nombre
+            and not p.get('imagen', {}).get('url_github')  # Sin imagen
+        ]
+        
+        # Paginación
+        total = len(sin_imagen)
+        pagina = sin_imagen[offset:offset + limite]
+        
+        return {
+            "ok": True,
+            "total": total,
+            "offset": offset,
+            "limite": limite,
+            "productos": pagina,
+            "nota": f"Faltan {total} productos por procesar"
+        }
+    
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.get("/api/productos/buscar-imagen/{codigo}")
+async def buscar_imagen_producto(codigo: str):
+    """
+    Busca si un producto específico tiene imagen
+    """
+    try:
+        productos = gh.cargar_productos_github()
+        
+        producto = next(
+            (p for p in productos if p.get('Codigo') == codigo),
+            None
+        )
+        
+        if not producto:
+            return {
+                "ok": False,
+                "error": "Producto no encontrado",
+                "codigo": codigo
+            }
+        
+        imagen = producto.get('imagen', {})
+        
+        return {
+            "ok": True,
+            "codigo": codigo,
+            "nombre": producto.get('Nombre', ''),
+            "tiene_imagen": imagen.get('existe', False),
+            "url_imagen": imagen.get('url_github'),
+            "fuente": imagen.get('fuente'),
+            "termino_busqueda": imagen.get('termino_busqueda'),
+            "precio": producto.get('Precio', 0),
+            "existencia": producto.get('Existencia', 0)
+        }
+    
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.get("/api/productos/verificar-lote")
+async def verificar_lote_imagenes(
+    inicio: int = 0,
+    cantidad: int = 50
+):
+    """
+    Verifica un lote específico de productos
+    Útil para ver el progreso por rangos
+    """
+    try:
+        productos = gh.cargar_productos_github()
+        
+        # Tomar el lote
+        lote = productos[inicio:inicio + cantidad]
+        
+        resumen = {
+            "inicio": inicio,
+            "fin": inicio + len(lote),
+            "total_lote": len(lote),
+            "con_imagen": 0,
+            "sin_imagen": 0,
+            "sin_nombre": 0
+        }
+        
+        detalle = []
+        
+        for prod in lote:
+            nombre = prod.get('Nombre', '').strip()
+            imagen = prod.get('imagen', {})
+            
+            item = {
+                "codigo": prod.get('Codigo'),
+                "nombre": nombre[:50] if nombre else "(sin nombre)",
+                "tiene_imagen": False,
+                "url": None
+            }
+            
+            if not nombre:
+                resumen["sin_nombre"] += 1
+                item["estado"] = "❌ Sin nombre"
+            elif imagen.get('url_github'):
+                resumen["con_imagen"] += 1
+                item["tiene_imagen"] = True
+                item["url"] = imagen.get('url_github')
+                item["estado"] = "✅ Con imagen"
+            else:
+                resumen["sin_imagen"] += 1
+                item["estado"] = "⏳ Sin imagen"
+            
+            detalle.append(item)
+        
+        return {
+            "ok": True,
+            "resumen": resumen,
+            "detalle": detalle
+        }
+    
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+@app.get("/panel-imagenes", response_class=HTMLResponse)
+async def panel_imagenes():
+    """Panel visual de progreso de imágenes"""
+    html_path = os.path.join(static_dir, "panel-imagenes.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read(), media_type="text/html; charset=utf-8")
+    return HTMLResponse("<h1>Panel no encontrado</h1><p>Crea el archivo static/panel-imagenes.html</p>", status_code=404)
+
+# =============================
 # 🔍 DEBUG
 # =============================
 
