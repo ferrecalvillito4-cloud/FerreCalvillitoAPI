@@ -291,65 +291,63 @@ class GestorImagenesProductos:
     # -------------------------------------------------------------------------
     async def buscar_imagen_pexels(self, termino: str, session: aiohttp.ClientSession) -> str:
         """
-        Busca imágenes en Pexels
+        Busca imágenes en Pexels con timeout agresivo
         """
         if not termino:
             return None
             
         try:
-            # Espera aleatoria para evitar rate limiting
-            await asyncio.sleep(random.uniform(0.3, 0.6))
+            # Espera mínima para evitar rate limiting
+            await asyncio.sleep(random.uniform(0.1, 0.3))
             
             headers = {
                 "Authorization": self.pexels_key,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "User-Agent": "Mozilla/5.0"
             }
             
             params = {
                 "query": termino,
-                "per_page": 5,  # Obtener varias opciones
-                "orientation": "square",  # Mejor para productos
-                "size": "medium"
+                "per_page": 1,  # Solo 1 para ser más rápido
+                "orientation": "square"
             }
             
-            logger.debug(f"   Buscando en Pexels: '{termino}'")
+            logger.debug(f"   🔎 Buscando: '{termino}'")
             
             async with session.get(
                 "https://api.pexels.com/v1/search",
                 headers=headers,
                 params=params,
-                timeout=aiohttp.ClientTimeout(total=15)
+                timeout=aiohttp.ClientTimeout(total=8, connect=3, sock_read=5)  # Timeout más agresivo
             ) as resp:
                 
                 if resp.status == 200:
                     data = await resp.json()
                     
                     if data.get("photos") and len(data["photos"]) > 0:
-                        # Tomar la primera imagen
                         img = data["photos"][0]
                         url = img.get("src", {}).get("large")
                         
                         if url and url.startswith("http"):
-                            logger.info(f"   ✅ Imagen encontrada: {termino}")
+                            logger.info(f"   ✅ Encontrada")
                             return url
-                    else:
-                        logger.debug(f"   ⚠️ Sin resultados para: {termino}")
-                        return None
+                    
+                    logger.debug(f"   ⚠️ Sin resultados")
+                    return None
                 
                 elif resp.status == 429:
-                    logger.warning("   ⚠️ Rate limit alcanzado, esperando...")
-                    await asyncio.sleep(2)
+                    logger.warning("   ⚠️ Rate limit - pausando 3s")
+                    await asyncio.sleep(3)
                     return None
                 
                 else:
-                    logger.debug(f"   ⚠️ Status {resp.status} para: {termino}")
+                    logger.debug(f"   ⚠️ Status {resp.status}")
                     return None
                     
         except asyncio.TimeoutError:
-            logger.debug(f"   ⏱️ Timeout para: {termino}")
+            logger.warning(f"   ⏱️ Timeout (8s)")
             return None
         except Exception as e:
-            logger.debug(f"   ❌ Error: {str(e)[:80]}")
+            logger.error(f"   ❌ Error: {str(e)[:60]}")
             return None
 
     # -------------------------------------------------------------------------
@@ -357,66 +355,50 @@ class GestorImagenesProductos:
     # -------------------------------------------------------------------------
     async def procesar_producto(self, codigo: str, nombre: str, session: aiohttp.ClientSession) -> dict:
         """
-        Procesa un producto y obtiene su imagen
+        Procesa un producto y obtiene su imagen CON TIMEOUT
         """
         # Validar que el nombre no esté vacío
         nombre_limpio = nombre.strip() if nombre else ""
 
         if not nombre_limpio or len(nombre_limpio) < 2:
-            logger.debug(f"⏭️ {codigo}: Sin nombre válido, omitiendo...")
             return {
                 "Codigo": codigo,
                 "imagen": {"existe": False, "url_github": None}
             }
 
-        logger.info(f"🔍 {codigo}: '{nombre_limpio[:60]}'")
+        logger.info(f"🔍 {codigo}: '{nombre_limpio[:40]}'")
 
         # 1. Extraer término de búsqueda
         termino = self.extraer_termino_busqueda(nombre_limpio)
         
         if not termino:
-            logger.info("   ❌ No se pudo extraer término de búsqueda")
+            logger.info("   ❌ Sin término")
             return {
                 "Codigo": codigo,
                 "imagen": {"existe": False, "url_github": None}
             }
 
-        # 2. Buscar imagen con el término principal
-        url_img = await self.buscar_imagen_pexels(termino, session)
-        
-        if url_img:
-            logger.info(f"   ✅ Imagen encontrada")
-            return {
-                "Codigo": codigo,
-                "imagen": {
-                    "existe": True, 
-                    "url_github": url_img, 
-                    "fuente": "pexels",
-                    "termino_busqueda": termino
-                }
-            }
-
-        # 3. Intentar con término alternativo (primera palabra significativa)
-        palabras = [p for p in nombre_limpio.split() if len(p) >= 3]
-        if len(palabras) > 1:
-            termino_alt = palabras[0].lower()
-            if termino_alt != termino:  # Evitar buscar lo mismo dos veces
-                logger.debug(f"   🔄 Intentando término alternativo: '{termino_alt}'")
-                url_img = await self.buscar_imagen_pexels(termino_alt, session)
-                
-                if url_img:
-                    logger.info(f"   ✅ Imagen encontrada (alternativo)")
-                    return {
-                        "Codigo": codigo,
-                        "imagen": {
-                            "existe": True, 
-                            "url_github": url_img, 
-                            "fuente": "pexels",
-                            "termino_busqueda": termino_alt
-                        }
+        # 2. Buscar imagen con timeout total de 10 segundos
+        try:
+            url_img = await asyncio.wait_for(
+                self.buscar_imagen_pexels(termino, session),
+                timeout=10.0
+            )
+            
+            if url_img:
+                return {
+                    "Codigo": codigo,
+                    "imagen": {
+                        "existe": True, 
+                        "url_github": url_img, 
+                        "fuente": "pexels",
+                        "termino_busqueda": termino
                     }
+                }
+        except asyncio.TimeoutError:
+            logger.warning(f"   ⏱️ Timeout total (10s)")
 
-        logger.info("   ❌ Sin resultados")
+        logger.info("   ❌ Sin imagen")
         return {
             "Codigo": codigo,
             "imagen": {"existe": False, "url_github": None}
@@ -428,21 +410,28 @@ class GestorImagenesProductos:
     async def procesar_lote_productos(
         self,
         productos: list[dict],
-        max_concurrentes: int = 3,
+        max_concurrentes: int = 5,  # Aumentado
         productos_por_lote: int = 50,
-        pausa_entre_lotes: int = 30
+        pausa_entre_lotes: int = 15  # Reducido
     ) -> list[dict]:
         
         total = len(productos)
         resultados = []
         
-        logger.info(f"\n🚀 INICIANDO PROCESAMIENTO DE {total} PRODUCTOS")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"🚀 PROCESANDO {total} PRODUCTOS")
         logger.info(f"   ⚙️ Fuente: Pexels API")
         logger.info(f"   ⚙️ Concurrentes: {max_concurrentes}")
-        logger.info(f"   ⚙️ Productos por lote: {productos_por_lote}")
+        logger.info(f"   ⚙️ Lote: {productos_por_lote}")
+        logger.info(f"{'='*60}")
 
-        timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=15)
-        connector = aiohttp.TCPConnector(limit_per_host=3, ssl=False)
+        timeout = aiohttp.ClientTimeout(total=15, connect=5, sock_read=8)
+        connector = aiohttp.TCPConnector(
+            limit=20, 
+            limit_per_host=5, 
+            ttl_dns_cache=300,
+            ssl=False
+        )
         
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             for i in range(0, total, productos_por_lote):
@@ -450,24 +439,34 @@ class GestorImagenesProductos:
                 lote_num = (i // productos_por_lote) + 1
                 lotes_totales = (total + productos_por_lote - 1) // productos_por_lote
 
-                logger.info(f"\n{'='*60}")
-                logger.info(f"📦 LOTE {lote_num}/{lotes_totales} - {len(lote)} productos")
-                logger.info(f"{'='*60}")
+                logger.info(f"\n📦 LOTE {lote_num}/{lotes_totales} ({len(lote)} productos)")
 
                 semaforo = asyncio.Semaphore(max_concurrentes)
 
                 async def procesar_con_limite(prod):
                     async with semaforo:
                         try:
-                            return await self.procesar_producto(
-                                prod.get("Codigo", ""),
-                                prod.get("Nombre", ""),
-                                session
+                            # Timeout por producto: 15 segundos máximo
+                            return await asyncio.wait_for(
+                                self.procesar_producto(
+                                    prod.get("Codigo", ""),
+                                    prod.get("Nombre", ""),
+                                    session
+                                ),
+                                timeout=15.0
                             )
-                        except Exception as e:
-                            logger.error(f"❌ {prod.get('Codigo')}: {str(e)[:50]}")
+                        except asyncio.TimeoutError:
+                            codigo = prod.get('Codigo', 'UNKNOWN')
+                            logger.error(f"⏱️ {codigo}: Timeout (15s)")
                             return {
-                                "Codigo": prod.get("Codigo"),
+                                "Codigo": codigo,
+                                "imagen": {"existe": False, "url_github": None}
+                            }
+                        except Exception as e:
+                            codigo = prod.get('Codigo', 'UNKNOWN')
+                            logger.error(f"❌ {codigo}: {str(e)[:40]}")
+                            return {
+                                "Codigo": codigo,
                                 "imagen": {"existe": False, "url_github": None}
                             }
 
@@ -478,22 +477,19 @@ class GestorImagenesProductos:
 
                 encontradas = sum(1 for r in lote_result if r.get('imagen', {}).get('existe'))
 
-                logger.info(f"\n✅ Lote {lote_num} completado")
-                logger.info(f"   Procesados: {len(lote_result)}/{len(lote)}")
-                logger.info(f"   Encontradas: {encontradas}")
-                logger.info(f"   Tasa éxito: {(encontradas/len(lote_result)*100):.1f}%" if lote_result else "0%")
+                logger.info(f"✅ Completado: {len(lote_result)}/{len(lote)} | Encontradas: {encontradas} ({(encontradas/len(lote_result)*100):.1f}%)" if lote_result else "⚠️ Sin resultados")
 
-                # Pausa entre lotes (excepto el último)
+                # Pausa entre lotes
                 if (i + productos_por_lote) < total:
-                    logger.info(f"⏸️ Pausa {pausa_entre_lotes}s...")
+                    logger.info(f"⏸️ Pausa {pausa_entre_lotes}s...\n")
                     await asyncio.sleep(pausa_entre_lotes)
 
         logger.info(f"\n{'='*60}")
-        logger.info("🎉 PROCESAMIENTO COMPLETADO")
+        logger.info("🎉 COMPLETADO")
         total_encontradas = sum(1 for r in resultados if r.get('imagen', {}).get('existe'))
         tasa = (total_encontradas/len(resultados)*100) if resultados else 0
-        logger.info(f"   Total procesados: {len(resultados)}")
-        logger.info(f"   Imágenes encontradas: {total_encontradas}")
+        logger.info(f"   Procesados: {len(resultados)}")
+        logger.info(f"   Encontradas: {total_encontradas}")
         logger.info(f"   Tasa éxito: {tasa:.1f}%")
         logger.info(f"{'='*60}\n")
         
