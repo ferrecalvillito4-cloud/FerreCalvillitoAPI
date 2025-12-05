@@ -14,6 +14,7 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
+            --glass: rgba(255, 255, 255, 0.85);
         }
         
         * {
@@ -22,16 +23,24 @@
             padding: 0
         }
         
+        html,
+        body {
+            height: 100%
+        }
+        
         body {
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
-            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px;
             min-height: 100vh;
         }
         
         .layout {
-            max-width: 1400px;
-            margin: 0 auto;
+            width: 100%;
+            max-width: 980px;
             border-radius: 20px;
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 250, 0.98));
@@ -50,6 +59,15 @@
         header h1 {
             font-size: 20px;
             color: var(--bg1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        header .subtitle {
+            color: var(--muted);
+            font-size: 13px;
+            margin-left: 6px;
         }
         
         .main {
@@ -66,15 +84,32 @@
             box-shadow: 0 6px 18px rgba(18, 18, 18, 0.04);
         }
         
+        .top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        
         .estado {
             font-size: 60px;
             text-align: center;
             color: var(--bg1);
+            min-width: 120px;
+        }
+        
+        .mensaje {
+            color: var(--muted);
+            font-size: 15px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .controls {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
             margin-top: 14px;
         }
@@ -90,49 +125,34 @@
             justify-content: center;
             gap: 9px;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-            transition: all 0.2s;
-            font-size: 14px;
-        }
-        
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transition: opacity 0.2s;
         }
         
         .btn:disabled {
             opacity: 0.55;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none
         }
         
         .btn-primary {
             background: linear-gradient(135deg, var(--bg1), var(--bg2));
-            color: #fff;
+            color: #fff
         }
         
-        .btn-success {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: #fff;
-        }
-        
-        .btn-warning {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #fff;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(90deg, var(--danger), #dc2626);
-            color: #fff;
+        .btn-secondary {
+            background: linear-gradient(90deg, var(--warning), #d97706);
+            color: #fff
         }
         
         .btn-info {
             background: #3b82f6;
-            color: #fff;
+            color: #fff
         }
         
-        .btn-sm {
-            padding: 8px 12px;
-            font-size: 13px;
+        .btn-danger {
+            background: linear-gradient(90deg, var(--danger), #dc2626);
+            color: #fff
         }
         
         .progress-container {
@@ -141,6 +161,7 @@
             border-radius: 12px;
             height: 44px;
             overflow: hidden;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
         }
         
         .progress-bar {
@@ -166,191 +187,77 @@
             padding: 14px;
             border-radius: 10px;
             text-align: center;
+            transition: transform .12s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.05)
         }
         
         .stat-card .label {
             font-size: 12px;
             color: var(--muted);
             text-transform: uppercase;
+            letter-spacing: 1px
         }
         
         .stat-card .value {
             font-size: 22px;
             color: #111;
             font-weight: 800;
-            margin-top: 6px;
+            margin-top: 6px
         }
         
-        .badge {
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: #eef2ff;
-            color: var(--bg1);
-            font-weight: 700;
-            font-size: 13px;
-        }
-        /* Modal */
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+        .timestamp {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 14px
         }
         
-        .modal.show {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: white;
-            border-radius: 16px;
-            max-width: 1000px;
-            width: 100%;
-            max-height: 90vh;
-            overflow: hidden;
+        aside.right {
             display: flex;
             flex-direction: column;
+            gap: 14px;
         }
         
-        .modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .panel {
+            padding: 16px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), #fff);
+            box-shadow: 0 6px 20px rgba(2, 6, 23, 0.03);
         }
         
-        .modal-header h2 {
-            font-size: 20px;
-            color: #111;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #999;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal-body {
-            padding: 24px;
-            overflow-y: auto;
-            flex: 1;
-        }
-        
-        .pagination-controls {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 24px;
-            border-top: 1px solid #e5e7eb;
-            background: #f9fafb;
-        }
-        
-        .pagination-info {
+        .panel h3 {
             font-size: 14px;
-            color: #666;
-            font-weight: 600;
-        }
-        
-        .pagination-buttons {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .producto-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
-        }
-        
-        .producto-card {
-            background: #f8fafc;
-            border-radius: 10px;
-            padding: 12px;
-            border: 2px solid transparent;
-            transition: all 0.2s;
-        }
-        
-        .producto-card:hover {
-            border-color: var(--bg1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .producto-card.con-imagen {
-            background: #ecfdf5;
-            border-color: #d1fae5;
-        }
-        
-        .producto-card.sin-imagen {
-            background: #fef3c7;
-            border-color: #fde68a;
-        }
-        
-        .producto-imagen {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 8px;
+            color: #334155;
             margin-bottom: 8px;
         }
         
-        .producto-codigo {
-            font-weight: 700;
-            color: var(--bg1);
-            font-size: 13px;
-            margin-bottom: 4px;
-        }
-        
-        .producto-nombre {
+        .log {
+            max-height: 240px;
+            overflow: auto;
+            background: #0b1221;
+            color: #9ff1b0;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: "Courier New", monospace;
             font-size: 12px;
-            color: #666;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            white-space: pre-wrap;
         }
         
-        .producto-estado {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 700;
-            margin-top: 8px;
+        .debug-panel {
+            display: none
         }
         
-        .estado-con {
-            background: #10b981;
-            color: white;
-        }
-        
-        .estado-sin {
-            background: #f59e0b;
-            color: white;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-            font-size: 16px;
+        .debug-panel pre {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            max-height: 220px;
+            overflow: auto;
+            font-size: 12px;
         }
         
         .small {
@@ -368,71 +275,71 @@
         .alert-error {
             background: #fee;
             color: #c00;
+            border: 1px solid #fcc;
         }
         
         .alert-success {
             background: #efe;
             color: #060;
+            border: 1px solid #cfc;
         }
         
         .alert-info {
             background: #eef;
             color: #006;
+            border: 1px solid #ccf;
         }
         
-        .log {
-            max-height: 200px;
-            overflow: auto;
-            background: #0b1221;
-            color: #9ff1b0;
-            padding: 10px;
-            border-radius: 8px;
-            font-family: "Courier New", monospace;
-            font-size: 12px;
+        footer {
+            padding: 14px 26px;
+            border-top: 1px solid rgba(0, 0, 0, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.25));
         }
         
-        @media (max-width: 900px) {
+        .badge {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: var(--bg1);
+            font-weight: 700;
+            font-size: 13px;
+        }
+        
+        @media (max-width:900px) {
             .main {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr
             }
-            .producto-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            }
-            .pagination-controls {
-                flex-direction: column;
-                gap: 12px;
+            aside.right {
+                order: 2
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="layout">
+    <div class="layout" role="main">
         <header>
-            <h1>🖼️ Gestor de Imágenes — FerreCalvillito</h1>
+            <h1>🖼️ Progreso de Imágenes <span class="subtitle">— Gestor FerreCalvillito</span></h1>
             <div style="flex:1"></div>
-            <span class="badge" id="badge-estado">Conectando</span>
+            <div class="small">Estado: <span class="badge" id="badge-estado">Conectando</span></div>
         </header>
 
         <div class="main">
             <section class="card">
-                <div style="display:flex;gap:18px;align-items:center">
-                    <div id="estado" class="estado">⏳</div>
-                    <div style="flex:1">
-                        <div id="mensaje" style="margin-bottom:8px;color:#666">Conectando...</div>
-                        <div class="controls">
-                            <button id="btn-procesar" class="btn btn-primary" onclick="procesarImagenes()">
-                                ▶️ Procesar 50
-                            </button>
-                            <button class="btn btn-success" onclick="verProductosConImagen()">
-                                ✅ Ver Con Imagen
-                            </button>
-                            <button class="btn btn-warning" onclick="verProductosSinImagen()">
-                                ⏳ Ver Sin Imagen
-                            </button>
-                            <button class="btn btn-info" onclick="verEstadisticas()">
-                                📊 Estadísticas
-                            </button>
+                <div class="top-row">
+                    <div style="display:flex;gap:18px;align-items:center">
+                        <div id="estado" class="estado">⏳</div>
+                        <div style="min-width:320px">
+                            <div id="mensaje" class="mensaje">Conectando con el servidor...</div>
+                            <div class="controls">
+                                <button id="btn-procesar" class="btn btn-primary" onclick="procesarImagenes()">▶️ Procesar</button>
+                                <button id="btn-detener" class="btn btn-danger" onclick="detenerProceso()" style="display:none">⏹️ Detener</button>
+                                <button id="btn-debug" class="btn btn-info" onclick="verDebug()">🔍 Debug</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -443,7 +350,7 @@
 
                 <div class="stats">
                     <div class="stat-card">
-                        <div class="label">Total</div>
+                        <div class="label">Total Productos</div>
                         <div id="total" class="value">-</div>
                     </div>
                     <div class="stat-card">
@@ -455,67 +362,60 @@
                         <div id="sin-imagen" class="value">-</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Tiempo Est.</div>
+                        <div class="label">Tiempo Estimado</div>
                         <div id="tiempo" class="value" style="font-size:18px">-</div>
                     </div>
                 </div>
+
+                <div class="timestamp" id="timestamp">Última actualización: -</div>
 
                 <div id="error" class="alert alert-error"></div>
                 <div id="success" class="alert alert-success"></div>
                 <div id="info" class="alert alert-info"></div>
             </section>
 
-            <aside>
-                <div class="card">
-                    <h3 style="margin-bottom:8px">Actividad</h3>
-                    <div class="log" id="log">Iniciando panel...\n</div>
+            <aside class="right">
+                <div class="panel">
+                    <h3>Actividad</h3>
+                    <div class="small">Últimos eventos del gestor</div>
+                    <div style="height:12px"></div>
+                    <div id="log" class="log">Iniciando panel...\n</div>
+                </div>
+
+                <div class="panel debug-panel" id="debug-panel">
+                    <h3>Debug (raw)</h3>
+                    <pre id="debug-content">—</pre>
+                </div>
+
+                <div class="panel">
+                    <h3>Acciones rápidas</h3>
+                    <p class="small">Usa los botones para controlar el procesador.</p>
+                    <div style="display:grid;gap:8px;margin-top:8px">
+                        <button class="btn btn-primary" onclick="window.location.reload()">🔄 Recargar</button>
+                        <button class="btn btn-info" onclick="copiarEstado()">📋 Copiar estado</button>
+                    </div>
                 </div>
             </aside>
         </div>
-    </div>
 
-    <!-- Modal para mostrar productos -->
-    <div class="modal" id="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Productos</h2>
-                <button class="modal-close" onclick="cerrarModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div id="modal-content" class="producto-grid"></div>
-            </div>
-            <div class="pagination-controls">
-                <div class="pagination-info" id="pagination-info">
-                    Mostrando 1-50 de 1000
-                </div>
-                <div class="pagination-buttons">
-                    <button class="btn btn-sm btn-info" onclick="irInicio()" id="btn-inicio">
-                        ⏮️ Inicio
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="paginaAnterior()" id="btn-anterior">
-                        ◀️ Anterior
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="paginaSiguiente()" id="btn-siguiente">
-                        Siguiente ▶️
-                    </button>
-                </div>
-            </div>
-        </div>
+        <footer>
+            <div class="small">Built: Panel v2.1 — FerreCalvillito</div>
+            <div class="small">API: <strong>/api/productos/</strong></div>
+        </footer>
     </div>
 
     <script>
+        let errorCount = 0;
         let procesando = false;
-        let paginaActual = 0;
-        let tipoActual = ''; // 'con' o 'sin'
-        let totalProductos = 0;
-        const LIMITE = 50;
         const logEl = document.getElementById('log');
+        const debugPanel = document.getElementById('debug-panel');
+        const debugContent = document.getElementById('debug-content');
 
         function pushLog(line) {
             const ts = new Date().toLocaleTimeString();
             logEl.textContent = `${ts} — ${line}\n` + logEl.textContent;
-            if (logEl.textContent.length > 10000) {
-                logEl.textContent = logEl.textContent.slice(0, 10000);
+            if (logEl.textContent.length > 20000) {
+                logEl.textContent = logEl.textContent.slice(0, 20000);
             }
         }
 
@@ -523,7 +423,19 @@
             const el = document.getElementById(type);
             el.textContent = msg;
             el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 5000);
+            setTimeout(() => el.style.display = 'none', 6000);
+        }
+
+        function showError(msg) {
+            showAlert('error', msg);
+        }
+
+        function showSuccess(msg) {
+            showAlert('success', msg);
+        }
+
+        function showInfo(msg) {
+            showAlert('info', msg);
         }
 
         async function callApi(path, opts = {}) {
@@ -535,7 +447,11 @@
                         ...opts.headers
                     }
                 });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+
                 return await res.json();
             } catch (err) {
                 pushLog(`❌ API Error: ${err.message}`);
@@ -543,245 +459,172 @@
             }
         }
 
+        async function verDebug() {
+            try {
+                const data = await callApi('/producto');
+                debugPanel.style.display = 'block';
+
+                const productos = Array.isArray(data) ? data : [];
+                const resumen = {
+                    total: productos.length,
+                    con_imagen: productos.filter(p => p.imagen && p.imagen.url_github).length,
+                    primeros_3: productos.slice(0, 3)
+                };
+
+                debugContent.textContent = JSON.stringify(resumen, null, 2);
+                pushLog('Debug cargado');
+            } catch (err) {
+                showError('No se pudo cargar debug');
+            }
+        }
+
         async function procesarImagenes() {
             try {
                 procesando = true;
-                document.getElementById('btn-procesar').disabled = true;
+                document.getElementById('btn-procesar').style.display = 'none';
+                document.getElementById('btn-detener').style.display = 'inline-flex';
                 document.getElementById('estado').textContent = '⚙️';
-                showAlert('info', '⏳ Procesando 50 productos...');
-                pushLog('Iniciando procesamiento...');
+
+                showInfo('⏳ Procesando imágenes...');
+                pushLog('Iniciando procesamiento manual...');
 
                 const data = await callApi('/api/productos/procesar-imagenes-manual', {
                     method: 'POST'
                 });
 
                 if (data.ok) {
-                    showAlert('success', data.mensaje);
+                    showSuccess(data.mensaje || 'Procesamiento iniciado');
                     pushLog(`✅ ${data.mensaje}`);
                 } else {
-                    showAlert('error', data.error);
-                    pushLog(`❌ ${data.error}`);
+                    showError(data.error || 'Error al procesar');
+                    pushLog(`❌ Error: ${data.error}`);
+                    resetearBotones();
                 }
             } catch (err) {
-                showAlert('error', 'Error al procesar');
-                pushLog(`❌ ${err.message}`);
-            } finally {
-                setTimeout(() => {
-                    procesando = false;
-                    document.getElementById('btn-procesar').disabled = false;
-                    actualizarProgreso();
-                }, 2000);
+                showError('Error al procesar imágenes');
+                resetearBotones();
             }
         }
 
-        function abrirModal(titulo) {
-            document.getElementById('modal-title').textContent = titulo;
-            document.getElementById('modal').classList.add('show');
-        }
-
-        function cerrarModal() {
-            document.getElementById('modal').classList.remove('show');
-            paginaActual = 0;
-        }
-
-        function actualizarPaginacionUI() {
-            const inicio = paginaActual * LIMITE + 1;
-            const fin = Math.min((paginaActual + 1) * LIMITE, totalProductos);
-            document.getElementById('pagination-info').textContent =
-                `Mostrando ${inicio.toLocaleString()}-${fin.toLocaleString()} de ${totalProductos.toLocaleString()}`;
-
-            // Deshabilitar botones según la página
-            document.getElementById('btn-inicio').disabled = paginaActual === 0;
-            document.getElementById('btn-anterior').disabled = paginaActual === 0;
-            document.getElementById('btn-siguiente').disabled = fin >= totalProductos;
-        }
-
-        async function cargarPagina(tipo, offset) {
-            const content = document.getElementById('modal-content');
-            content.innerHTML = '<div class="loading">⏳ Cargando productos...</div>';
-
+        async function detenerProceso() {
             try {
-                const endpoint = tipo === 'con' ?
-                    `/api/productos/con-imagen?limite=${LIMITE}&offset=${offset}` :
-                    `/api/productos/sin-imagen?limite=${LIMITE}&offset=${offset}`;
+                showInfo('🛑 Deteniendo proceso...');
+                pushLog('Solicitando detención del proceso...');
 
-                const data = await callApi(endpoint);
+                const data = await callApi('/api/productos/detener-proceso', {
+                    method: 'POST'
+                });
 
                 if (data.ok) {
-                    totalProductos = data.total;
-                    actualizarPaginacionUI();
-
-                    if (data.productos.length > 0) {
-                        if (tipo === 'con') {
-                            content.innerHTML = data.productos.map(p => `
-                                <div class="producto-card con-imagen">
-                                    <img src="${p.url_imagen}" class="producto-imagen" 
-                                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23999%22%3ENo disponible%3C/text%3E%3C/svg%3E'"
-                                         alt="${p.nombre}">
-                                    <div class="producto-codigo">${p.codigo}</div>
-                                    <div class="producto-nombre">${p.nombre}</div>
-                                    <span class="producto-estado estado-con">✅ ${p.fuente}</span>
-                                </div>
-                            `).join('');
-                        } else {
-                            content.innerHTML = data.productos.map(p => `
-                                <div class="producto-card sin-imagen">
-                                    <div style="height:150px;background:#fde68a;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:48px">
-                                        ❓
-                                    </div>
-                                    <div class="producto-codigo">${p.codigo}</div>
-                                    <div class="producto-nombre">${p.nombre}</div>
-                                    <span class="producto-estado estado-sin">⏳ Pendiente</span>
-                                </div>
-                            `).join('');
-                        }
-                        pushLog(`📄 Página ${paginaActual + 1} cargada (${data.productos.length} productos)`);
-                    } else {
-                        content.innerHTML = '<div class="loading">No hay más productos</div>';
-                    }
+                    showSuccess(data.mensaje || 'Proceso detenido');
+                    pushLog(`✅ ${data.mensaje}`);
                 } else {
-                    content.innerHTML = '<div class="loading">❌ Error al cargar</div>';
+                    showError(data.error || 'Error al detener');
+                    pushLog(`❌ Error: ${data.error}`);
                 }
+
+                resetearBotones();
             } catch (err) {
-                content.innerHTML = '<div class="loading">❌ Error al cargar</div>';
+                showError('Error al detener proceso');
                 pushLog(`❌ ${err.message}`);
+                resetearBotones();
             }
         }
 
-        async function verProductosConImagen() {
-            tipoActual = 'con';
-            paginaActual = 0;
-            abrirModal('✅ Productos CON Imagen');
-            await cargarPagina('con', 0);
+        function resetearBotones() {
+            procesando = false;
+            document.getElementById('btn-procesar').style.display = 'inline-flex';
+            document.getElementById('btn-detener').style.display = 'none';
+            document.getElementById('btn-procesar').disabled = false;
+            document.getElementById('estado').textContent = '📊';
         }
 
-        async function verProductosSinImagen() {
-            tipoActual = 'sin';
-            paginaActual = 0;
-            abrirModal('⏳ Productos SIN Imagen');
-            await cargarPagina('sin', 0);
-        }
+        function copiarEstado() {
+            const estado = {
+                total: document.getElementById('total').textContent,
+                con_imagen: document.getElementById('con-imagen').textContent,
+                sin_imagen: document.getElementById('sin-imagen').textContent,
+                porcentaje: document.getElementById('progress-bar').textContent,
+                tiempo: document.getElementById('tiempo').textContent
+            };
 
-        function irInicio() {
-            paginaActual = 0;
-            cargarPagina(tipoActual, 0);
-        }
-
-        function paginaAnterior() {
-            if (paginaActual > 0) {
-                paginaActual--;
-                cargarPagina(tipoActual, paginaActual * LIMITE);
-            }
-        }
-
-        function paginaSiguiente() {
-            const maxPagina = Math.ceil(totalProductos / LIMITE) - 1;
-            if (paginaActual < maxPagina) {
-                paginaActual++;
-                cargarPagina(tipoActual, paginaActual * LIMITE);
-            }
-        }
-
-        async function verEstadisticas() {
-            abrirModal('📊 Estadísticas Detalladas');
-            const content = document.getElementById('modal-content');
-            content.innerHTML = '<div class="loading">⏳ Cargando estadísticas...</div>';
-
-            // Ocultar controles de paginación para estadísticas
-            document.querySelector('.pagination-controls').style.display = 'none';
-
-            try {
-                const data = await callApi('/api/productos/estadisticas-imagenes');
-
-                if (data.ok) {
-                    const r = data.resumen;
-                    const e = data.estimaciones;
-                    content.innerHTML = `
-                        <div style="background:#f8fafc;padding:20px;border-radius:10px">
-                            <h3 style="margin-bottom:16px">📊 Resumen General</h3>
-                            <div style="display:grid;gap:12px">
-                                <div><strong>Total productos:</strong> ${r.total_productos.toLocaleString()}</div>
-                                <div><strong>Con nombre válido:</strong> ${r.con_nombre.toLocaleString()}</div>
-                                <div><strong>Sin nombre:</strong> ${r.sin_nombre.toLocaleString()}</div>
-                                <div style="color:#10b981"><strong>✅ Con imagen:</strong> ${r.con_imagen.toLocaleString()}</div>
-                                <div style="color:#f59e0b"><strong>⏳ Sin imagen:</strong> ${r.sin_imagen.toLocaleString()}</div>
-                                <div><strong>Progreso:</strong> ${r.porcentaje_completado.toFixed(2)}%</div>
-                                <hr>
-                                <h3 style="margin-top:12px">⏱️ Estimaciones</h3>
-                                <div><strong>Tiempo restante:</strong> ${e.tiempo_restante_50x}</div>
-                                <div><strong>Lotes necesarios:</strong> ${e.lotes_necesarios_50}</div>
-                                <div><strong>Con pausas (15s):</strong> ${e.tiempo_con_pausas}</div>
-                            </div>
-                        </div>
-                    `;
-                    pushLog('📊 Estadísticas cargadas');
-                }
-            } catch (err) {
-                content.innerHTML = '<div class="loading">❌ Error al cargar estadísticas</div>';
-                pushLog(`❌ ${err.message}`);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(JSON.stringify(estado, null, 2))
+                    .then(() => {
+                        pushLog('Estado copiado');
+                        showInfo('✅ Estado copiado al portapapeles');
+                    })
+                    .catch(() => pushLog('No se pudo copiar'));
+            } else {
+                pushLog('Clipboard no disponible');
             }
         }
 
         async function actualizarProgreso() {
             try {
                 const data = await callApi('/producto');
+                errorCount = 0;
+
+                if (!Array.isArray(data)) {
+                    throw new Error('Respuesta inválida del servidor');
+                }
+
                 const total = data.length;
                 const conImagen = data.filter(p => p.imagen && p.imagen.url_github).length;
                 const sinImagen = total - conImagen;
                 const porcentaje = total > 0 ? ((conImagen / total) * 100).toFixed(1) : 0;
 
+                // Actualizar UI
                 if (!procesando) {
                     document.getElementById('estado').textContent = '📊';
                 }
-                document.getElementById('mensaje').textContent = `${conImagen.toLocaleString()} de ${total.toLocaleString()} productos con imagen`;
+                document.getElementById('mensaje').textContent = `${conImagen} de ${total} productos con imagen`;
                 document.getElementById('badge-estado').textContent = procesando ? 'Procesando' : 'Conectado';
 
-                document.getElementById('progress-bar').style.width = porcentaje + '%';
-                document.getElementById('progress-bar').textContent = porcentaje + '%';
+                // Barra de progreso
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = porcentaje + '%';
+                progressBar.textContent = porcentaje + '%';
 
+                // Stats
                 document.getElementById('total').textContent = total.toLocaleString();
                 document.getElementById('con-imagen').textContent = conImagen.toLocaleString();
                 document.getElementById('sin-imagen').textContent = sinImagen.toLocaleString();
 
+                // Tiempo estimado
                 if (sinImagen > 0) {
-                    const min = Math.ceil((sinImagen / 50) * 2);
-                    document.getElementById('tiempo').textContent = min < 60 ? `${min}m` : `${Math.floor(min/60)}h ${min%60}m`;
+                    const minutos = Math.ceil((sinImagen / 50) * 2);
+                    document.getElementById('tiempo').textContent =
+                        minutos < 60 ? `${minutos}m` : `${Math.floor(minutos/60)}h ${minutos%60}m`;
                 } else {
-                    document.getElementById('tiempo').textContent = '✅ Completo';
-                }
-
-                pushLog(`✅ ${conImagen}/${total} (${porcentaje}%)`);
-            } catch (err) {
-                document.getElementById('badge-estado').textContent = 'Error';
-                pushLog(`❌ ${err.message}`);
-            }
-        }
-
-        // Cerrar modal al hacer click fuera
-        document.getElementById('modal').addEventListener('click', (e) => {
-            if (e.target.id === 'modal') cerrarModal();
-        });
-
-        // Mostrar controles de paginación cuando se abre el modal (excepto estadísticas)
-        const modalObserver = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    const modal = document.getElementById('modal');
-                    const paginationControls = document.querySelector('.pagination-controls');
-                    if (modal.classList.contains('show') && tipoActual !== '') {
-                        paginationControls.style.display = 'flex';
+                    document.getElementById('tiempo').textContent = 'Completo';
+                    if (procesando) {
+                        resetearBotones();
+                        showSuccess('✅ Procesamiento completado');
                     }
                 }
-            });
-        });
 
-        modalObserver.observe(document.getElementById('modal'), {
-            attributes: true
-        });
+                // Timestamp
+                document.getElementById('timestamp').textContent =
+                    'Última actualización: ' + new Date().toLocaleString('es-MX');
+
+                pushLog(`✅ ${conImagen}/${total} (${porcentaje}%)`);
+
+            } catch (err) {
+                errorCount++;
+                document.getElementById('badge-estado').textContent = 'Error';
+                pushLog(`❌ Error de conexión (${errorCount})`);
+
+                if (errorCount === 1) {
+                    showError('Error de conexión con el servidor');
+                }
+            }
+        }
 
         // Iniciar
         actualizarProgreso();
         setInterval(actualizarProgreso, 5000);
+
         pushLog('Panel iniciado correctamente');
     </script>
 </body>
