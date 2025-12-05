@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class GestorImagenes:
+class GestorImagenesProductos:
     def __init__(self):
         logger.info("🟢 Gestor inicializado (Yandex + Google fallback)")
 
