@@ -180,20 +180,11 @@ async def startup_event():
         # 1.5️⃣ Inicializar Gestor de Imágenes
         print("\n🖼️ PASO 1.5: Inicializando Gestor de Imágenes...")
         try:
-            github_owner = os.getenv("GITHUB_OWNER")
-            github_repo_name = os.getenv("GITHUB_REPO")
-
-            gestor_imagenes = GestorImagenesProductos(
-                directorio_imagenes="imagenes",
-                github_token=os.getenv("GITHUB_TOKEN"),
-                github_repo=f"{github_owner}/{github_repo_name}"
-            )
-            print(f"   ✅ Gestor de Imágenes inicializado")
-            print(f"   📁 Directorio: {IMAGENES_DIR}")
-            print(f"   🔐 GitHub: {github_repo_name or 'No configurado'}")
+          gestor_imagenes = GestorImagenesProductos()
+          print(f"   ✅ Gestor de Imágenes inicializado")
         except Exception as e:
-            print(f"   ⚠️ Error inicializando imágenes: {e}")
-            gestor_imagenes = None
+          print(f"   ⚠️ Error inicializando imágenes: {e}")
+          gestor_imagenes = None
         
         # 2️⃣ Inicializar módulo de productos
         print("\n📊 PASO 2: Inicializando módulo de productos...")
@@ -467,15 +458,15 @@ async def admin_upload_productos(data: list[dict]):
         print(f"\n🖼️ Verificando productos sin imagen...")
         
         if gestor_imagenes:
-            productos_sin_imagen = [
-                p for p in data 
-                if p.get('Descripcion') and p['Descripcion'].strip()
-                and not p.get('imagen', {}).get('url_github')
-            ]
+         productos_sin_imagen = [
+         p for p in data 
+         if p.get('Nombre') and p['Nombre'].strip()
+         and not p.get('imagen', {}).get('url_github')
+         ]
             
-            print(f"   📦 Productos sin imagen: {len(productos_sin_imagen)}")
+         print(f"   📦 Productos sin imagen: {len(productos_sin_imagen)}")
             
-            if productos_sin_imagen:
+         if productos_sin_imagen:
                 try:
                     asyncio.create_task(
                         procesar_imagenes_background(productos_sin_imagen)
@@ -523,16 +514,14 @@ async def procesar_imagenes_background(productos_lote):
         
         # Procesar de a 5 productos para poder detener rápido
         for i in range(0, len(productos_lote), 5):
-            if detener_proceso_flag:
-                print(f"\n🛑 PROCESO DETENIDO - Procesados: {i}/{len(productos_lote)}\n")
-                break
+         if detener_proceso_flag:
+            print(f"\n🛑 PROCESO DETENIDO - Procesados: {i}/{len(productos_lote)}\n")
+            break
+    
+         sublote = productos_lote[i:i+5]
+         resultados = await gestor_imagenes.procesar_lote(sublote)
             
-            sublote = productos_lote[i:i+5]
-            resultados = await gestor_imagenes.procesar_lote_productos(
-                sublote, max_concurrentes=2, productos_por_lote=5, pausa_entre_lotes=10
-            )
-            
-            for resultado in resultados:
+         for resultado in resultados:
                 codigo = resultado.get("Codigo")
                 imagen = resultado.get("imagen", {})
                 if imagen.get("url_github") and codigo in productos_dict:
@@ -1044,19 +1033,20 @@ async def actualizar_imagen_producto(data: list[dict]):
 @app.get("/api/productos/progreso-imagenes-detallado")
 async def progreso_detallado():
     """Muestra progreso detallado del procesamiento"""
-    if not gestor_imagenes:
-        return {"error": "Gestor no disponible"}
-    
-    progreso = gestor_imagenes.obtener_progreso()
-    
-    return {
-        "procesados": progreso["procesados"],
-        "total": progreso["total"],
-        "porcentaje": progreso["porcentaje"],
-        "ultimo_lote": progreso["ultimo_lote"],
-        "estado": "completo" if progreso["procesados"] >= progreso["total"] else "en_progreso",
-        "timestamp": datetime.now().isoformat()
-    }
+    try:
+        productos = gh.cargar_productos_github()
+        con_imagen = len([p for p in productos if p.get('imagen', {}).get('url_github')])
+        total = len(productos)
+        
+        return {
+            "procesados": con_imagen,
+            "total": total,
+            "porcentaje": round((con_imagen/total*100), 2) if total > 0 else 0,
+            "estado": "completo" if con_imagen >= total else "en_progreso",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 # =============================
 # 🔍 DEBUG
