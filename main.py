@@ -1047,6 +1047,47 @@ async def progreso_detallado():
         }
     except Exception as e:
         return {"error": str(e)}
+    
+@app.get("/api/productos/todas-imagenes")
+async def obtener_todas_imagenes():
+    """
+    Devuelve TODAS las URLs de imágenes en un solo endpoint
+    para evitar hacer 35,000 peticiones individuales
+    
+    Retorna: { "CODIGO1": { existe, url_github, fuente }, "CODIGO2": {...}, ... }
+    """
+    try:
+        # Cargar productos desde GitHub
+        productos = gh.cargar_productos_github()
+        
+        # Transformar a formato { "CODIGO": { existe, url_github, fuente } }
+        resultado = {}
+        
+        for producto in productos:
+            codigo = producto.get("Codigo", "")
+            imagen = producto.get("imagen", {})
+            
+            if codigo:
+                resultado[codigo] = {
+                    "existe": imagen.get("existe", False),
+                    "url_github": imagen.get("url_github", ""),
+                    "fuente": imagen.get("fuente", "")
+                }
+        
+        total = len(resultado)
+        con_imagen = sum(1 for v in resultado.values() if v.get("existe"))
+        
+        print(f"✅ GET /api/productos/todas-imagenes")
+        print(f"   Total: {total} productos")
+        print(f"   Con imagen: {con_imagen}")
+        
+        return resultado
+    
+    except Exception as e:
+        print(f"❌ Error obteniendo todas las imágenes: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
 
 # =============================
 # 🔍 DEBUG
